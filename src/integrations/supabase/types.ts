@@ -9,13 +9,219 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      invites: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          pair_id: string | null
+          recipient_email: string
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          pair_id?: string | null
+          recipient_email: string
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          pair_id?: string | null
+          recipient_email?: string
+          sender_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
+            referencedRelation: "pairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invites_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pairs: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_1_id: string
+          user_2_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_1_id: string
+          user_2_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_1_id?: string
+          user_2_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pairs_user_1_id_fkey"
+            columns: ["user_1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pairs_user_2_id_fkey"
+            columns: ["user_2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rewards: {
+        Row: {
+          claimed: boolean
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          description: string
+          id: string
+          pair_id: string
+          point_cost: number
+        }
+        Insert: {
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          pair_id: string
+          point_cost: number
+        }
+        Update: {
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          pair_id?: string
+          point_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rewards_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rewards_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
+            referencedRelation: "pairs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string
+          id: string
+          pair_id: string
+          points: number
+          tag: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          pair_id: string
+          points: number
+          tag: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          pair_id?: string
+          points?: number
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
+            referencedRelation: "pairs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_pair_member: {
+        Args: { pair_id: string; user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
