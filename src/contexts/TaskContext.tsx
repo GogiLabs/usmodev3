@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { Task, TaskTag } from '@/types/Task';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
@@ -12,7 +12,8 @@ interface TaskState {
 type TaskAction =
   | { type: 'ADD_TASK'; payload: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'> }
   | { type: 'COMPLETE_TASK'; payload: { id: string } }
-  | { type: 'DELETE_TASK'; payload: { id: string } };
+  | { type: 'DELETE_TASK'; payload: { id: string } }
+  | { type: 'LOAD_TASKS'; payload: TaskState };
 
 interface TaskContextType {
   tasks: Task[];
@@ -25,10 +26,15 @@ interface TaskContextType {
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
+// Local storage key
+const TASKS_STORAGE_KEY = 'usmode_tasks';
+
 const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
+  let updatedState: TaskState;
+  
   switch (action.type) {
     case 'ADD_TASK':
-      return {
+      updatedState = {
         ...state,
         tasks: [
           ...state.tasks,
@@ -40,6 +46,8 @@ const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
           },
         ],
       };
+      break;
+      
     case 'COMPLETE_TASK': {
       const updatedTasks = state.tasks.map((task) => {
         if (task.id === action.payload.id && !task.completed) {
@@ -58,23 +66,59 @@ const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
       );
       const pointsToAdd = completedTask ? completedTask.points : 0;
 
-      return {
+      updatedState = {
         tasks: updatedTasks,
         earnedPoints: state.earnedPoints + pointsToAdd,
       };
+      break;
     }
+    
     case 'DELETE_TASK':
-      return {
+      updatedState = {
         ...state,
         tasks: state.tasks.filter((task) => task.id !== action.payload.id),
       };
+      break;
+      
+    case 'LOAD_TASKS':
+      updatedState = action.payload;
+      break;
+      
     default:
       return state;
   }
+  
+  // Save to localStorage whenever state changes
+  localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(updatedState));
+  return updatedState;
 };
 
-export const TaskProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(taskReducer, {
+// Initialize state from localStorage or with default values
+const initializeState = (): TaskState => {
+  const storedState = localStorage.getItem(TASKS_STORAGE_KEY);
+  
+  if (storedState) {
+    try {
+      const parsedState = JSON.parse(storedState);
+      
+      // Convert string dates back to Date objects
+      const tasksWithDates = parsedState.tasks.map((task: any) => ({
+        ...task,
+        createdAt: new Date(task.createdAt),
+        completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
+      }));
+      
+      return {
+        ...parsedState,
+        tasks: tasksWithDates,
+      };
+    } catch (error) {
+      console.error('Error parsing stored tasks:', error);
+    }
+  }
+  
+  // Default initial state
+  return {
     tasks: [
       {
         id: uuidv4(),
@@ -102,7 +146,11 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       },
     ],
     earnedPoints: 0,
-  });
+  };
+};
+
+export const TaskProvider = ({ children }: { children: ReactNode }) => {
+  const [state, dispatch] = useReducer(taskReducer, null, initializeState);
 
   const { isAuthenticated, showAuthRequiredToast } = useAuth();
 

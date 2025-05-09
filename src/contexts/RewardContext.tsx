@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { Reward } from '@/types/Reward';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
@@ -14,7 +14,8 @@ interface RewardState {
 type RewardAction =
   | { type: 'ADD_REWARD'; payload: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'> }
   | { type: 'CLAIM_REWARD'; payload: { id: string } }
-  | { type: 'DELETE_REWARD'; payload: { id: string } };
+  | { type: 'DELETE_REWARD'; payload: { id: string } }
+  | { type: 'LOAD_REWARDS'; payload: RewardState };
 
 interface RewardContextType {
   rewards: Reward[];
@@ -27,10 +28,15 @@ interface RewardContextType {
 
 const RewardContext = createContext<RewardContextType | undefined>(undefined);
 
+// Local storage key
+const REWARDS_STORAGE_KEY = 'usmode_rewards';
+
 const rewardReducer = (state: RewardState, action: RewardAction): RewardState => {
+  let updatedState: RewardState;
+  
   switch (action.type) {
     case 'ADD_REWARD':
-      return {
+      updatedState = {
         ...state,
         rewards: [
           ...state.rewards,
@@ -42,6 +48,8 @@ const rewardReducer = (state: RewardState, action: RewardAction): RewardState =>
           },
         ],
       };
+      break;
+      
     case 'CLAIM_REWARD': {
       const updatedRewards = state.rewards.map((reward) => {
         if (reward.id === action.payload.id && !reward.claimed) {
@@ -60,23 +68,59 @@ const rewardReducer = (state: RewardState, action: RewardAction): RewardState =>
       );
       const pointsToSpend = claimedReward ? claimedReward.pointCost : 0;
 
-      return {
+      updatedState = {
         rewards: updatedRewards,
         spentPoints: state.spentPoints + pointsToSpend,
       };
+      break;
     }
+    
     case 'DELETE_REWARD':
-      return {
+      updatedState = {
         ...state,
         rewards: state.rewards.filter((reward) => reward.id !== action.payload.id),
       };
+      break;
+      
+    case 'LOAD_REWARDS':
+      updatedState = action.payload;
+      break;
+      
     default:
       return state;
   }
+  
+  // Save to localStorage whenever state changes
+  localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(updatedState));
+  return updatedState;
 };
 
-export const RewardProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(rewardReducer, {
+// Initialize state from localStorage or with default values
+const initializeState = (): RewardState => {
+  const storedState = localStorage.getItem(REWARDS_STORAGE_KEY);
+  
+  if (storedState) {
+    try {
+      const parsedState = JSON.parse(storedState);
+      
+      // Convert string dates back to Date objects
+      const rewardsWithDates = parsedState.rewards.map((reward: any) => ({
+        ...reward,
+        createdAt: new Date(reward.createdAt),
+        claimedAt: reward.claimedAt ? new Date(reward.claimedAt) : undefined,
+      }));
+      
+      return {
+        ...parsedState,
+        rewards: rewardsWithDates,
+      };
+    } catch (error) {
+      console.error('Error parsing stored rewards:', error);
+    }
+  }
+  
+  // Default initial state
+  return {
     rewards: [
       {
         id: uuidv4(),
@@ -101,7 +145,11 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
       },
     ],
     spentPoints: 0,
-  });
+  };
+};
+
+export const RewardProvider = ({ children }: { children: ReactNode }) => {
+  const [state, dispatch] = useReducer(rewardReducer, null, initializeState);
 
   const { isAuthenticated, showAuthRequiredToast } = useAuth();
   const { earnedPoints } = useTask();
@@ -109,6 +157,10 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
 
   const addReward = (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
     dispatch({ type: 'ADD_REWARD', payload: reward });
+    toast({
+      title: "Reward added!",
+      description: `New reward "${reward.description}" added.`,
+    });
   };
 
   const claimReward = (id: string) => {
