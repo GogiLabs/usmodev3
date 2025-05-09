@@ -3,6 +3,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { Database } from '@/integrations/supabase/types';
+
+// Define type for pair data from Supabase
+export type Pair = Database['public']['Tables']['pairs']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'];
 
 // Generic hook for fetching data
 export function useSupabaseQuery<T>(
@@ -11,7 +16,7 @@ export function useSupabaseQuery<T>(
   dependencies: any[] = [],
   options: { enabled?: boolean } = { enabled: true }
 ) {
-  const [data, setData] = useState<T[] | null>(null);
+  const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { isAuthenticated } = useAuth();
@@ -52,7 +57,7 @@ export function useSupabaseQuery<T>(
 export function usePair() {
   const { user, isAuthenticated } = useAuth();
   
-  return useSupabaseQuery(
+  return useSupabaseQuery<Pair>(
     'pairs',
     supabase
       .from('pairs')
@@ -68,7 +73,7 @@ export function usePair() {
 export function useProfile() {
   const { user, isAuthenticated } = useAuth();
   
-  return useSupabaseQuery(
+  return useSupabaseQuery<Profile>(
     'profiles',
     supabase
       .from('profiles')
@@ -84,7 +89,7 @@ export function useProfile() {
 export function useInvites() {
   const { user, isAuthenticated } = useAuth();
   
-  return useSupabaseQuery(
+  return useSupabaseQuery<Database['public']['Tables']['invites']['Row'][]>(
     'invites',
     supabase
       .from('invites')

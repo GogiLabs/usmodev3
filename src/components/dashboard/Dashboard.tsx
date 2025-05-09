@@ -7,7 +7,7 @@ import { Header } from "@/components/common/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthRequiredBanner } from "@/components/common/AuthRequiredBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { usePair } from "@/hooks/use-supabase-data";
+import { usePair, Pair } from "@/hooks/use-supabase-data";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 

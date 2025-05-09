@@ -1,14 +1,14 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   session: Session | null;
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email?: string, password?: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   showAuthRequiredToast: () => void;
@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // First set up the auth state listener
@@ -43,9 +44,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  // Updated login function to handle both direct navigation and form submission
+  const login = async (email?: string, password?: string) => {
     try {
       setLoading(true);
+      
+      // If no credentials provided, navigate to auth page
+      if (!email || !password) {
+        navigate('/auth');
+        return;
+      }
+      
+      // Otherwise proceed with login
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -56,6 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Logged in successfully",
         description: "Welcome back!",
       });
+      
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Login failed",
