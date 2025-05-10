@@ -10,7 +10,8 @@ export type SoftDeleteOptions = {
 }
 
 // Define valid table names from the Database type
-type TableNames = keyof Database['public']['Tables'] | keyof Database['public']['Views'];
+// Only include tables that have a deleted_at column - not views
+type TableNames = keyof Database['public']['Tables'];
 
 export function useSoftDelete(tableName: TableNames, options?: SoftDeleteOptions) {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
