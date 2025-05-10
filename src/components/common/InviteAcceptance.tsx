@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -42,11 +43,7 @@ export function InviteAcceptance() {
             pair_id, 
             expires_at, 
             sender_id, 
-            profiles:sender_id (
-              id, 
-              display_name,
-              email
-            )
+            profiles(id, email, display_name)
           `)
           .eq('id', inviteId)
           .single();
@@ -72,9 +69,24 @@ export function InviteAcceptance() {
         // Invite is valid
         setStatus('valid');
         
-        // Extract sender info - fixed the email property access
-        const senderEmail = invite.profiles?.email;
-        const senderName = invite.profiles?.display_name || senderEmail?.split('@')[0] || 'Someone';
+        // Get the sender's profile data
+        let senderEmail;
+        let senderName;
+        
+        if (invite.profiles && Array.isArray(invite.profiles) && invite.profiles.length > 0) {
+          senderEmail = invite.profiles[0].email;
+          senderName = invite.profiles[0].display_name || senderEmail?.split('@')[0] || 'Someone';
+        } else {
+          // Fallback if we couldn't get profile data
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email, display_name')
+            .eq('id', invite.sender_id)
+            .single();
+            
+          senderEmail = profileData?.email;
+          senderName = profileData?.display_name || senderEmail?.split('@')[0] || 'Someone';
+        }
         
         setInviteData({
           sender_email: senderEmail,
