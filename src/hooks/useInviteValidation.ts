@@ -60,25 +60,44 @@ export const useInviteValidation = (inviteId: string | null) => {
         setStatus('valid');
         
         // Get the sender's profile data
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('email, display_name')
-          .eq('id', invite.sender_id)
-          .single();
-            
-        if (profileError) {
-          console.error("Error fetching sender profile:", profileError);
-          // Even with profile error, we can still proceed with what we know
+        try {
+          // Get the sender's profile data
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')  // Select all columns to ensure we get what's available
+            .eq('id', invite.sender_id)
+            .single();
+          
+          if (profileError) {
+            console.error("Error fetching sender profile:", profileError);
+            // Set default values if profile fetch fails
+            setInviteData({
+              sender_name: 'your partner',
+              pair_id: invite.pair_id
+            });
+            return;
+          }
+          
+          // Now use optional chaining and defaults for safety
+          const displayName = profileData?.display_name;
+          // Attempt to get email from the profile or use null
+          const email = null; // Since email doesn't exist in profiles table based on the error
+          
+          const senderName = displayName || (email ? email.split('@')[0] : 'Someone');
+          
+          setInviteData({
+            sender_email: email,
+            sender_name: senderName,
+            pair_id: invite.pair_id
+          });
+        } catch (error) {
+          console.error("Error in profile processing:", error);
+          // Fallback data
+          setInviteData({
+            pair_id: invite.pair_id,
+            sender_name: 'your partner'
+          });
         }
-        
-        const senderEmail = profileData?.email;
-        const senderName = profileData?.display_name || senderEmail?.split('@')[0] || 'Someone';
-        
-        setInviteData({
-          sender_email: senderEmail,
-          sender_name: senderName,
-          pair_id: invite.pair_id
-        });
         
       } catch (error) {
         console.error("Error checking invite:", error);
