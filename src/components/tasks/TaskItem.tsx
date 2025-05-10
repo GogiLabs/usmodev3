@@ -5,6 +5,7 @@ import { useTask } from "@/contexts/TaskContext";
 import { CheckCircle, Circle, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TaskItemProps {
   task: Task;
@@ -12,16 +13,31 @@ interface TaskItemProps {
 
 export function TaskItem({ task }: TaskItemProps) {
   const { completeTask, deleteTask, getTagColor } = useTask();
+  const { isAuthenticated, showAuthRequiredToast } = useAuth();
   const [isAnimating, setIsAnimating] = useState(false);
   
   const handleComplete = () => {
-    if (!task.completed) {
-      setIsAnimating(true);
-      completeTask(task.id);
-      
-      // Reset animation state after animation completes
-      setTimeout(() => setIsAnimating(false), 1000);
+    if (task.completed) return;
+    
+    if (!isAuthenticated) {
+      showAuthRequiredToast();
+      return;
     }
+    
+    setIsAnimating(true);
+    completeTask(task.id);
+    
+    // Reset animation state after animation completes
+    setTimeout(() => setIsAnimating(false), 1000);
+  };
+  
+  const handleDelete = () => {
+    if (!isAuthenticated) {
+      showAuthRequiredToast();
+      return;
+    }
+    
+    deleteTask(task.id);
   };
   
   return (
@@ -77,7 +93,7 @@ export function TaskItem({ task }: TaskItemProps) {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => deleteTask(task.id)}
+        onClick={handleDelete}
         className="text-muted-foreground hover:text-destructive"
       >
         <Trash2 className="h-4 w-4" />

@@ -34,14 +34,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <Index />
-          </ProtectedRoute>
-        } 
-      />
+      {/* Root path is accessible to all users (not protected) */}
+      <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route 

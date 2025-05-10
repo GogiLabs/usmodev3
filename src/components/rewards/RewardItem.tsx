@@ -5,6 +5,7 @@ import { useReward } from "@/contexts/RewardContext";
 import { Gift, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RewardItemProps {
   reward: Reward;
@@ -12,11 +13,17 @@ interface RewardItemProps {
 
 export function RewardItem({ reward }: RewardItemProps) {
   const { claimReward, deleteReward, canClaimReward } = useReward();
+  const { isAuthenticated, showAuthRequiredToast } = useAuth();
   const [isAnimating, setIsAnimating] = useState(false);
   
   const canClaim = canClaimReward(reward.pointCost) && !reward.claimed;
 
   const handleClaim = () => {
+    if (!isAuthenticated) {
+      showAuthRequiredToast();
+      return;
+    }
+    
     if (canClaim) {
       setIsAnimating(true);
       claimReward(reward.id);
@@ -24,6 +31,15 @@ export function RewardItem({ reward }: RewardItemProps) {
       // Reset animation state after animation completes
       setTimeout(() => setIsAnimating(false), 1000);
     }
+  };
+  
+  const handleDelete = () => {
+    if (!isAuthenticated) {
+      showAuthRequiredToast();
+      return;
+    }
+    
+    deleteReward(reward.id);
   };
 
   return (
@@ -80,7 +96,7 @@ export function RewardItem({ reward }: RewardItemProps) {
             variant={canClaim ? "outline" : "ghost"}
             size="sm"
             onClick={handleClaim}
-            disabled={!canClaim}
+            disabled={!canClaim && isAuthenticated}
             className={cn(
               "transition-all duration-300",
               canClaim && "border-primary text-primary hover:bg-primary/10",
@@ -93,7 +109,7 @@ export function RewardItem({ reward }: RewardItemProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => deleteReward(reward.id)}
+          onClick={handleDelete}
           className="text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
