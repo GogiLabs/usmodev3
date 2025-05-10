@@ -2,13 +2,17 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
 
 export type SoftDeleteOptions = {
   onSuccess?: () => void;
   onError?: (error: any) => void;
 }
 
-export function useSoftDelete(tableName: string, options?: SoftDeleteOptions) {
+// Define valid table names from the Database type
+type TableNames = keyof Database['public']['Tables'] | keyof Database['public']['Views'];
+
+export function useSoftDelete(tableName: TableNames, options?: SoftDeleteOptions) {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const { toast } = useToast();
 
