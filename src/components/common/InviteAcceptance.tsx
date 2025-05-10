@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -45,10 +44,8 @@ export function InviteAcceptance() {
             sender_id, 
             profiles:sender_id (
               id, 
-              display_name, 
-              email:id (
-                email
-              )
+              display_name,
+              email
             )
           `)
           .eq('id', inviteId)
@@ -75,8 +72,8 @@ export function InviteAcceptance() {
         // Invite is valid
         setStatus('valid');
         
-        // Extract sender info
-        const senderEmail = invite.profiles?.email?.email;
+        // Extract sender info - fixed the email property access
+        const senderEmail = invite.profiles?.email;
         const senderName = invite.profiles?.display_name || senderEmail?.split('@')[0] || 'Someone';
         
         setInviteData({
