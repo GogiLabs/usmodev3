@@ -48,6 +48,25 @@ export function useSupabaseQuery<T>(
     };
 
     fetchData();
+    
+    // Set up realtime subscription for supported tables
+    if (['tasks', 'rewards', 'invites'].includes(tableName)) {
+      const subscription = supabase
+        .channel(`${tableName}_changes`)
+        .on('postgres_changes', {
+          event: '*', 
+          schema: 'public',
+          table: tableName,
+        }, () => {
+          // When data changes, refetch
+          fetchData();
+        })
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
   }, [tableName, isAuthenticated, options.enabled, toast, ...dependencies]);
 
   return { data, error, isLoading };
@@ -66,6 +85,34 @@ export function usePair() {
       .single(),
     [user?.id],
     { enabled: isAuthenticated && !!user?.id }
+  );
+}
+
+// Hook for fetching the pair details (including partner profile)
+export function usePairDetails() {
+  const { user, isAuthenticated } = useAuth();
+  
+  return useSupabaseQuery<Database['public']['Views']['pair_details']['Row']>(
+    'pair_details',
+    supabase
+      .from('pair_details')
+      .select('*')
+      .or(`user_1_id.eq.${user?.id},user_2_id.eq.${user?.id}`)
+      .single(),
+    [user?.id],
+    { enabled: isAuthenticated && !!user?.id }
+  );
+}
+
+// Hook for fetching pair points using the new DB function
+export function usePairPoints(pairId?: string) {
+  return useSupabaseQuery<{ total_earned: number, total_spent: number, available: number }>(
+    'pair_points',
+    supabase
+      .rpc('get_pair_points', { pair_id: pairId })
+      .single(),
+    [pairId],
+    { enabled: !!pairId }
   );
 }
 
@@ -94,8 +141,39 @@ export function useInvites() {
     supabase
       .from('invites')
       .select('*')
-      .eq('sender_id', user?.id),
+      .eq('sender_id', user?.id)
+      .is('deleted_at', null),
     [user?.id],
     { enabled: isAuthenticated && !!user?.id }
+  );
+}
+
+// Hook for fetching tasks with soft delete support
+export function useTasks(pairId?: string) {
+  return useSupabaseQuery<Database['public']['Tables']['tasks']['Row'][]>(
+    'tasks',
+    supabase
+      .from('tasks')
+      .select('*')
+      .eq('pair_id', pairId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
+    [pairId],
+    { enabled: !!pairId }
+  );
+}
+
+// Hook for fetching rewards with soft delete support
+export function useRewards(pairId?: string) {
+  return useSupabaseQuery<Database['public']['Tables']['rewards']['Row'][]>(
+    'rewards',
+    supabase
+      .from('rewards')
+      .select('*')
+      .eq('pair_id', pairId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
+    [pairId],
+    { enabled: !!pairId }
   );
 }

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
@@ -13,6 +14,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   showAuthRequiredToast: () => void;
   loading: boolean;
+  updateUserProfile: (updates: { display_name?: string, avatar_url?: string, theme_preference?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +25,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Update last_active_at timestamp periodically
+  useEffect(() => {
+    if (!user) return;
+    
+    const updateLastActive = async () => {
+      await supabase
+        .from('profiles')
+        .update({ last_active_at: new Date().toISOString() })
+        .eq('id', user.id);
+    };
+    
+    // Update on initial load
+    updateLastActive();
+    
+    // Then update every 5 minutes while active
+    const interval = setInterval(updateLastActive, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     // First set up the auth state listener
@@ -143,6 +165,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const updateUserProfile = async (updates: { display_name?: string, avatar_url?: string, theme_preference?: string }) => {
+    try {
+      if (!user) throw new Error("User not authenticated");
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update profile.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       isAuthenticated: !!user, 
@@ -152,7 +199,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signUp,
       logout, 
       showAuthRequiredToast,
-      loading
+      loading,
+      updateUserProfile
     }}>
       {children}
     </AuthContext.Provider>

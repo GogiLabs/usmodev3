@@ -5,6 +5,8 @@ import { LogIn, LogOut, User } from "lucide-react";
 import { PointsDisplay } from "./PointsDisplay";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "react-router-dom";
+import { ProfileSettings } from "./ProfileSettings";
+import { InviteHandler } from "./InviteHandler";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,20 +43,24 @@ export function Header() {
               </Link>
             </Button>
           ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent/5">
-                  <User className="h-4 w-4 mr-1" />
-                  {user?.email?.split('@')[0]}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => logout()}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <>
+              <InviteHandler />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent/5">
+                    <User className="h-4 w-4 mr-1" />
+                    {user?.email?.split('@')[0]}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => logout()}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <ProfileSettings />
+            </>
           )}
         </div>
       </div>

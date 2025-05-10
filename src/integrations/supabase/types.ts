@@ -12,6 +12,7 @@ export type Database = {
       invites: {
         Row: {
           created_at: string
+          deleted_at: string | null
           expires_at: string
           id: string
           pair_id: string | null
@@ -21,6 +22,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           expires_at?: string
           id?: string
           pair_id?: string | null
@@ -30,6 +32,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           expires_at?: string
           id?: string
           pair_id?: string | null
@@ -38,6 +41,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invites_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
+            referencedRelation: "pair_details"
+            referencedColumns: ["pair_id"]
+          },
           {
             foreignKeyName: "invites_pair_id_fkey"
             columns: ["pair_id"]
@@ -95,21 +105,30 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           display_name: string | null
           id: string
+          last_active_at: string | null
+          theme_preference: string | null
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           id: string
+          last_active_at?: string | null
+          theme_preference?: string | null
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          last_active_at?: string | null
+          theme_preference?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -120,6 +139,7 @@ export type Database = {
           claimed_at: string | null
           claimed_by: string | null
           created_at: string
+          deleted_at: string | null
           description: string
           id: string
           pair_id: string
@@ -130,6 +150,7 @@ export type Database = {
           claimed_at?: string | null
           claimed_by?: string | null
           created_at?: string
+          deleted_at?: string | null
           description: string
           id?: string
           pair_id: string
@@ -140,6 +161,7 @@ export type Database = {
           claimed_at?: string | null
           claimed_by?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string
           id?: string
           pair_id?: string
@@ -157,6 +179,13 @@ export type Database = {
             foreignKeyName: "rewards_pair_id_fkey"
             columns: ["pair_id"]
             isOneToOne: false
+            referencedRelation: "pair_details"
+            referencedColumns: ["pair_id"]
+          },
+          {
+            foreignKeyName: "rewards_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
             referencedRelation: "pairs"
             referencedColumns: ["id"]
           },
@@ -168,6 +197,7 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           created_at: string
+          deleted_at: string | null
           description: string
           id: string
           pair_id: string
@@ -179,6 +209,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          deleted_at?: string | null
           description: string
           id?: string
           pair_id: string
@@ -190,6 +221,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string
           id?: string
           pair_id?: string
@@ -208,6 +240,13 @@ export type Database = {
             foreignKeyName: "tasks_pair_id_fkey"
             columns: ["pair_id"]
             isOneToOne: false
+            referencedRelation: "pair_details"
+            referencedColumns: ["pair_id"]
+          },
+          {
+            foreignKeyName: "tasks_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
             referencedRelation: "pairs"
             referencedColumns: ["id"]
           },
@@ -215,9 +254,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      pair_details: {
+        Row: {
+          created_at: string | null
+          pair_id: string | null
+          user_1_avatar: string | null
+          user_1_id: string | null
+          user_1_name: string | null
+          user_2_avatar: string | null
+          user_2_id: string | null
+          user_2_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pairs_user_1_id_fkey"
+            columns: ["user_1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pairs_user_2_id_fkey"
+            columns: ["user_2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      check_invite_rate_limit: {
+        Args: { sender_id: string }
+        Returns: boolean
+      }
+      get_pair_points: {
+        Args: { pair_id: string }
+        Returns: {
+          total_earned: number
+          total_spent: number
+          available: number
+        }[]
+      }
       is_pair_member: {
         Args: { pair_id: string; user_id: string }
         Returns: boolean

@@ -9,8 +9,17 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
+import { TaskProvider } from "./contexts/TaskContext";
+import { RewardProvider } from "./contexts/RewardContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -40,7 +49,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <TaskProvider>
+            <RewardProvider>
+              <AppRoutes />
+            </RewardProvider>
+          </TaskProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -4,28 +4,37 @@ import { useReward } from "@/contexts/RewardContext";
 import { Heart, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { usePair, usePairPoints } from "@/hooks/use-supabase-data";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PointsDisplayProps {
   className?: string;
 }
 
 export function PointsDisplay({ className }: PointsDisplayProps) {
-  const { earnedPoints } = useTask();
-  const { spentPoints } = useReward();
+  const { earnedPoints: localEarnedPoints } = useTask();
+  const { spentPoints: localSpentPoints } = useReward();
   const [isAnimating, setIsAnimating] = useState(false);
-  const [previousPoints, setPreviousPoints] = useState(earnedPoints - spentPoints);
-  const currentPoints = earnedPoints - spentPoints;
+  const { isAuthenticated } = useAuth();
+  const { data: pair } = usePair();
+  const { data: pairPoints } = usePairPoints(pair?.id);
+
+  // Calculate points based on whether we're using local storage or Supabase
+  const earnedPoints = isAuthenticated && pairPoints ? pairPoints.total_earned : localEarnedPoints;
+  const spentPoints = isAuthenticated && pairPoints ? pairPoints.total_spent : localSpentPoints;
+  const availablePoints = isAuthenticated && pairPoints ? pairPoints.available : (localEarnedPoints - localSpentPoints);
+  
+  const [previousPoints, setPreviousPoints] = useState(availablePoints);
   
   // Detect changes to trigger animation
   useEffect(() => {
-    const points = earnedPoints - spentPoints;
-    if (points !== previousPoints) {
+    if (availablePoints !== previousPoints) {
       setIsAnimating(true);
       const timer = setTimeout(() => setIsAnimating(false), 1500);
-      setPreviousPoints(points);
+      setPreviousPoints(availablePoints);
       return () => clearTimeout(timer);
     }
-  }, [earnedPoints, spentPoints, previousPoints]);
+  }, [availablePoints, previousPoints]);
 
   return (
     <div className={cn(
@@ -47,7 +56,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
           "text-primary transition-all",
           isAnimating ? "text-lg font-bold" : ""
         )}>
-          {currentPoints}
+          {availablePoints}
         </span>
         <span className="text-muted-foreground"> points available</span>
       </div>
