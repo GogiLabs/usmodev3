@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
+import InvitePage from "./pages/InvitePage";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import { TaskProvider } from "./contexts/TaskContext";
 import { RewardProvider } from "./contexts/RewardContext";
@@ -33,9 +34,24 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Index />} />
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        } 
+      />
       <Route path="/auth" element={<Auth />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route 
+        path="/invite" 
+        element={
+          <ProtectedRoute>
+            <InvitePage />
+          </ProtectedRoute>
+        } 
+      />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

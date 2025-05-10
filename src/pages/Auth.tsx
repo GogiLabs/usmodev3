@@ -1,9 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +32,16 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 const Auth = () => {
   const { isAuthenticated, login, signUp, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteId = searchParams.get("invite_id");
   const [activeTab, setActiveTab] = useState<string>("login");
+
+  useEffect(() => {
+    // If there's an invite ID, default to the signup tab for new users
+    if (inviteId) {
+      setActiveTab("signup");
+    }
+  }, [inviteId]);
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -54,7 +63,11 @@ const Auth = () => {
   const onLoginSubmit = async (values: LoginFormValues) => {
     try {
       await login(values.email, values.password);
-      navigate("/");
+      if (inviteId) {
+        navigate(`/invite?invite_id=${inviteId}`);
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       console.error("Login error:", error);
     }
@@ -69,8 +82,12 @@ const Auth = () => {
     }
   };
 
-  if (isAuthenticated) {
+  if (isAuthenticated && !inviteId) {
     return <Navigate to="/" />;
+  }
+
+  if (isAuthenticated && inviteId) {
+    return <Navigate to={`/invite?invite_id=${inviteId}`} />;
   }
 
   return (
@@ -83,14 +100,22 @@ const Auth = () => {
             <span className="text-accent">Mode</span>
           </h1>
         </div>
-        <p className="mt-2 text-muted-foreground">Create shared tasks and rewards with your partner</p>
+        <p className="mt-2 text-muted-foreground">
+          {inviteId 
+            ? "Create an account or sign in to accept your invitation"
+            : "Create shared tasks and rewards with your partner"}
+        </p>
       </div>
 
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
-          <CardTitle className="text-center text-xl">Welcome</CardTitle>
+          <CardTitle className="text-center text-xl">
+            {inviteId ? "Accept Invitation" : "Welcome"}
+          </CardTitle>
           <CardDescription className="text-center">
-            Sign in to your account or create a new one
+            {inviteId
+              ? "Sign in or create an account to connect with your partner"
+              : "Sign in to your account or create a new one"}
           </CardDescription>
         </CardHeader>
         <CardContent>
