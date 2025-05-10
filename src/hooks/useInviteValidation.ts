@@ -60,12 +60,17 @@ export const useInviteValidation = (inviteId: string | null) => {
         setStatus('valid');
         
         // Get the sender's profile data
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('email, display_name')
           .eq('id', invite.sender_id)
           .single();
             
+        if (profileError) {
+          console.error("Error fetching sender profile:", profileError);
+          // Even with profile error, we can still proceed with what we know
+        }
+        
         const senderEmail = profileData?.email;
         const senderName = profileData?.display_name || senderEmail?.split('@')[0] || 'Someone';
         

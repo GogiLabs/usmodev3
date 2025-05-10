@@ -5,7 +5,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export const useInviteAcceptance = (inviteId: string | null, inviteData: { pair_id?: string } | null) => {
+type InviteData = {
+  pair_id?: string;
+  sender_name?: string;
+  sender_email?: string;
+} | null;
+
+export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteData) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -63,7 +69,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: { pair_
       // Success!
       toast({
         title: "Invitation accepted!",
-        description: `You are now connected with ${inviteData.sender_name}.`,
+        description: `You are now connected with ${inviteData.sender_name || 'your partner'}.`,
       });
       
       // Navigate to the dashboard after a brief delay
