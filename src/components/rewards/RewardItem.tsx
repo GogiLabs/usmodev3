@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Reward } from "@/types/Reward";
-import { useReward } from "@/contexts/RewardContext";
+import { useReward } from "@/contexts/reward/RewardContext";
 import { Gift, Sparkles, Trash2, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";

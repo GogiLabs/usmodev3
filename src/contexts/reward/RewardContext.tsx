@@ -1,26 +1,17 @@
+
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
 import { Reward } from '@/types/Reward';
-import { v4 as uuidv4 } from 'uuid';
-import { useAuth } from './AuthContext';
-import { useTask } from './TaskContext';
+import { useAuth } from '../AuthContext';
+import { useTask } from '../task/TaskContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useRewards, usePair, usePairPoints } from '@/hooks/use-supabase-data';
 import { useRewardService, mapDbRewardToAppReward } from '@/services/rewardService';
 import { useOptimisticUpdate } from '@/hooks/use-optimistic-update';
 import { toast as sonnerToast } from 'sonner';
+import { rewardReducer, RewardState, RewardAction } from './rewardReducer';
+import { createRewardWithDefaults, initializeRewardState } from './rewardUtils';
 
-interface RewardState {
-  rewards: Reward[];
-  spentPoints: number;
-}
-
-type RewardAction =
-  | { type: 'ADD_REWARD'; payload: Reward }
-  | { type: 'CLAIM_REWARD'; payload: { id: string, userId?: string } }
-  | { type: 'DELETE_REWARD'; payload: { id: string } }
-  | { type: 'LOAD_REWARDS'; payload: RewardState }
-  | { type: 'SYNC_DB_REWARDS'; payload: Reward[] };
-
+// Define the context type
 interface RewardContextType {
   rewards: Reward[];
   spentPoints: number;
@@ -35,134 +26,8 @@ interface RewardContextType {
 
 const RewardContext = createContext<RewardContextType | undefined>(undefined);
 
-// Local storage key
-const REWARDS_STORAGE_KEY = 'usmode_rewards';
-
-const rewardReducer = (state: RewardState, action: RewardAction): RewardState => {
-  let updatedState: RewardState;
-  
-  switch (action.type) {
-    case 'ADD_REWARD':
-      updatedState = {
-        ...state,
-        rewards: [
-          action.payload,
-          ...state.rewards,
-        ],
-      };
-      break;
-      
-    case 'CLAIM_REWARD': {
-      const updatedRewards = state.rewards.map((reward) => {
-        if (reward.id === action.payload.id && !reward.claimed) {
-          return {
-            ...reward,
-            claimed: true,
-            claimedAt: new Date(),
-            claimedBy: action.payload.userId
-          };
-        }
-        return reward;
-      });
-
-      // Calculate spent points
-      const claimedReward = state.rewards.find(
-        (reward) => reward.id === action.payload.id && !reward.claimed
-      );
-      const pointsToSpend = claimedReward ? claimedReward.pointCost : 0;
-
-      updatedState = {
-        rewards: updatedRewards,
-        spentPoints: state.spentPoints + pointsToSpend,
-      };
-      break;
-    }
-    
-    case 'DELETE_REWARD':
-      updatedState = {
-        ...state,
-        rewards: state.rewards.filter((reward) => reward.id !== action.payload.id),
-      };
-      break;
-      
-    case 'LOAD_REWARDS':
-      updatedState = action.payload;
-      break;
-      
-    case 'SYNC_DB_REWARDS':
-      updatedState = {
-        rewards: action.payload,
-        // Calculate spent points from claimed rewards
-        spentPoints: action.payload.reduce(
-          (total, reward) => total + (reward.claimed ? reward.pointCost : 0), 0
-        ),
-      };
-      break;
-      
-    default:
-      return state;
-  }
-  
-  // Save to localStorage whenever state changes (but only if not using DB)
-  localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(updatedState));
-  return updatedState;
-};
-
-// Initialize state from localStorage or with default values
-const initializeState = (): RewardState => {
-  const storedState = localStorage.getItem(REWARDS_STORAGE_KEY);
-  
-  if (storedState) {
-    try {
-      const parsedState = JSON.parse(storedState);
-      
-      // Convert string dates back to Date objects
-      const rewardsWithDates = parsedState.rewards.map((reward: any) => ({
-        ...reward,
-        createdAt: new Date(reward.createdAt),
-        claimedAt: reward.claimedAt ? new Date(reward.claimedAt) : undefined,
-      }));
-      
-      return {
-        ...parsedState,
-        rewards: rewardsWithDates,
-      };
-    } catch (error) {
-      console.error('Error parsing stored rewards:', error);
-    }
-  }
-  
-  // Default initial state
-  return {
-    rewards: [
-      {
-        id: uuidv4(),
-        description: "Movie night",
-        pointCost: 20,
-        claimed: false,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        description: "Restaurant dinner",
-        pointCost: 50,
-        claimed: false,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        description: "Weekend getaway",
-        pointCost: 200,
-        claimed: false,
-        createdAt: new Date(),
-      },
-    ],
-    spentPoints: 0,
-  };
-};
-
 export const RewardProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(rewardReducer, null, initializeState);
+  const [state, dispatch] = useReducer(rewardReducer, null, initializeRewardState);
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -244,12 +109,7 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
 
   const addReward = async (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
     // Create reward object with default values
-    const newReward: Reward = {
-      id: uuidv4(),
-      claimed: false,
-      createdAt: new Date(),
-      ...reward
-    };
+    const newReward = createRewardWithDefaults(reward);
 
     // Optimistically update UI
     dispatch({ type: 'ADD_REWARD', payload: newReward });

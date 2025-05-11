@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,8 +9,8 @@ import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import InvitePage from "./pages/InvitePage";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
-import { TaskProvider } from "./contexts/TaskContext";
-import { RewardProvider } from "./contexts/RewardContext";
+import { TaskProvider } from "./contexts/task/TaskContext";
+import { RewardProvider } from "./contexts/reward/RewardContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {

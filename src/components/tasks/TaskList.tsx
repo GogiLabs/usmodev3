@@ -1,5 +1,5 @@
 
-import { useTask } from "@/contexts/TaskContext";
+import { useTask } from "@/contexts/task/TaskContext";
 import { TaskItem } from "./TaskItem";
 import { TaskForm } from "./TaskForm";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";

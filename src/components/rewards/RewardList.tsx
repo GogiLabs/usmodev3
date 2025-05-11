@@ -1,5 +1,5 @@
 
-import { useReward } from "@/contexts/RewardContext";
+import { useReward } from "@/contexts/reward/RewardContext";
 import { RewardItem } from "./RewardItem";
 import { RewardForm } from "./RewardForm";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
