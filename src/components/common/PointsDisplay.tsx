@@ -1,12 +1,18 @@
 
 import { useTask } from "@/contexts/TaskContext";
 import { useReward } from "@/contexts/RewardContext";
-import { Heart, Loader2, Sparkles } from "lucide-react";
+import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { usePair, usePairPoints } from "@/hooks/use-supabase-data";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PointsDisplayProps {
   className?: string;
@@ -16,6 +22,9 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const { earnedPoints: localEarnedPoints, loadingTasks } = useTask();
   const { spentPoints: localSpentPoints, loadingRewards } = useReward();
   const [isAnimating, setIsAnimating] = useState(false);
+  const [lastPoints, setLastPoints] = useState<number | null>(null);
+  const [pointDelta, setPointDelta] = useState<number>(0);
+  
   const { isAuthenticated } = useAuth();
   const { data: pair } = usePair();
   const { data: pairPoints, isLoading: pairPointsLoading } = usePairPoints(pair?.id);
@@ -27,17 +36,24 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const spentPoints = isAuthenticated && pairPoints ? pairPoints.total_spent : localSpentPoints;
   const availablePoints = isAuthenticated && pairPoints ? pairPoints.available : (localEarnedPoints - localSpentPoints);
   
-  const [previousPoints, setPreviousPoints] = useState(availablePoints);
-  
   // Detect changes to trigger animation
   useEffect(() => {
-    if (!loading && availablePoints !== previousPoints) {
+    if (loading) return;
+    
+    if (lastPoints !== null && availablePoints !== lastPoints) {
+      // Calculate the delta
+      const delta = availablePoints - lastPoints;
+      setPointDelta(delta);
+      
+      // Trigger animation
       setIsAnimating(true);
       const timer = setTimeout(() => setIsAnimating(false), 1500);
-      setPreviousPoints(availablePoints);
+      
       return () => clearTimeout(timer);
     }
-  }, [availablePoints, previousPoints, loading]);
+    
+    setLastPoints(availablePoints);
+  }, [availablePoints, lastPoints, loading]);
 
   if (loading) {
     return (
@@ -66,14 +82,51 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
           <Sparkles className="h-4 w-4 text-accent absolute -top-1 -right-1 animate-pulse" />
         )}
       </div>
-      <div className="text-sm font-medium flex items-center gap-1">
-        <span className={cn(
-          "text-primary transition-all",
-          isAnimating ? "text-lg font-bold" : ""
-        )}>
-          {availablePoints}
-        </span>
-        <span className="text-muted-foreground"> points available</span>
+      
+      <div className="text-sm font-medium flex items-center gap-1 relative">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1">
+                <span className={cn(
+                  "text-primary transition-all",
+                  isAnimating ? "text-lg font-bold" : ""
+                )}>
+                  {availablePoints}
+                </span>
+                
+                {isAnimating && pointDelta !== 0 && (
+                  <span className={cn(
+                    "absolute -top-5 right-0 text-sm font-bold animate-fade-in",
+                    pointDelta > 0 ? "text-green-600" : "text-red-600"
+                  )}>
+                    {pointDelta > 0 ? `+${pointDelta}` : pointDelta}
+                  </span>
+                )}
+                
+                <Star className={cn(
+                  "h-3 w-3 text-primary",
+                  isAnimating && "animate-spin-slow"
+                )} 
+                fill={isAnimating ? "currentColor" : "none"} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-xs space-y-1">
+                <div className="flex items-center gap-1">
+                  <Award className="h-3 w-3 text-green-600" />
+                  <span>Earned: {earnedPoints} points</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Award className="h-3 w-3 text-red-600" />
+                  <span>Spent: {spentPoints} points</span>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <span className="text-muted-foreground">points</span>
       </div>
     </div>
   );

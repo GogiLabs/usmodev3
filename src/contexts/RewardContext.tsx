@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
 import { Reward } from '@/types/Reward';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
@@ -7,6 +7,9 @@ import { useTask } from './TaskContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useRewards, usePair, usePairPoints } from '@/hooks/use-supabase-data';
 import { useRewardService, mapDbRewardToAppReward } from '@/services/rewardService';
+import { useOptimisticUpdate } from '@/hooks/use-optimistic-update';
+import { Sonner } from '@/components/ui/sonner';
+import { toast as sonnerToast } from 'sonner';
 
 interface RewardState {
   rewards: Reward[];
@@ -14,8 +17,8 @@ interface RewardState {
 }
 
 type RewardAction =
-  | { type: 'ADD_REWARD'; payload: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'> }
-  | { type: 'CLAIM_REWARD'; payload: { id: string } }
+  | { type: 'ADD_REWARD'; payload: Reward }
+  | { type: 'CLAIM_REWARD'; payload: { id: string, userId?: string } }
   | { type: 'DELETE_REWARD'; payload: { id: string } }
   | { type: 'LOAD_REWARDS'; payload: RewardState }
   | { type: 'SYNC_DB_REWARDS'; payload: Reward[] };
@@ -28,6 +31,8 @@ interface RewardContextType {
   deleteReward: (id: string) => void;
   canClaimReward: (pointCost: number) => boolean;
   loadingRewards: boolean;
+  error: Error | null;
+  refetchRewards: () => void;
 }
 
 const RewardContext = createContext<RewardContextType | undefined>(undefined);
@@ -43,13 +48,8 @@ const rewardReducer = (state: RewardState, action: RewardAction): RewardState =>
       updatedState = {
         ...state,
         rewards: [
+          action.payload,
           ...state.rewards,
-          {
-            id: uuidv4(),
-            claimed: false,
-            createdAt: new Date(),
-            ...action.payload,
-          },
         ],
       };
       break;
@@ -61,6 +61,7 @@ const rewardReducer = (state: RewardState, action: RewardAction): RewardState =>
             ...reward,
             claimed: true,
             claimedAt: new Date(),
+            claimedBy: action.payload.userId
           };
         }
         return reward;
@@ -165,29 +166,51 @@ const initializeState = (): RewardState => {
 export const RewardProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(rewardReducer, null, initializeState);
   const [loadingRewards, setLoadingRewards] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
   const { earnedPoints: localEarnedPoints } = useTask();
   const { toast } = useToast();
   
   const { data: pair } = usePair();
-  const { data: dbRewards, isLoading: dbRewardsLoading } = useRewards(pair?.id);
+  const { data: dbRewards, isLoading: dbRewardsLoading, error: dbRewardsError } = useRewards(pair?.id);
   const { data: pairPoints } = usePairPoints(pair?.id);
   const rewardService = useRewardService(pair?.id);
+
+  // Refetch rewards function
+  const refetchRewards = useCallback(() => {
+    setRetryCount(prev => prev + 1);
+  }, []);
+
+  // Handle network errors
+  useEffect(() => {
+    if (dbRewardsError) {
+      setError(new Error(dbRewardsError.message || "Failed to load rewards"));
+    } else {
+      setError(null);
+    }
+  }, [dbRewardsError, retryCount]);
 
   // Sync with Supabase when authenticated and we have DB rewards
   useEffect(() => {
     if (isAuthenticated && dbRewards && pair) {
       setLoadingRewards(true);
       
-      // Map DB rewards to app format
-      const appRewards = dbRewards.map(mapDbRewardToAppReward);
-      
-      // Update local state with DB rewards
-      dispatch({ type: 'SYNC_DB_REWARDS', payload: appRewards });
-      setLoadingRewards(false);
+      try {
+        // Map DB rewards to app format
+        const appRewards = dbRewards.map(mapDbRewardToAppReward);
+        
+        // Update local state with DB rewards
+        dispatch({ type: 'SYNC_DB_REWARDS', payload: appRewards });
+      } catch (err) {
+        console.error("Error syncing rewards:", err);
+        setError(err instanceof Error ? err : new Error("Failed to process rewards data"));
+      } finally {
+        setLoadingRewards(false);
+      }
     }
-  }, [isAuthenticated, dbRewards, pair]);
+  }, [isAuthenticated, dbRewards, pair, retryCount]);
 
   // Update loading state based on DB loading
   useEffect(() => {
@@ -198,25 +221,60 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isAuthenticated, dbRewardsLoading, pair]);
 
+  // Setup optimistic updates
+  const { execute: executeAddReward } = useOptimisticUpdate(
+    async (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
+      if (!pair?.id) {
+        throw new Error("Cannot create reward: No pair ID");
+      }
+      return await rewardService.createReward(reward);
+    }
+  );
+
+  const { execute: executeClaimReward } = useOptimisticUpdate(
+    async (params: { rewardId: string, userId: string }) => {
+      return await rewardService.claimReward(params.rewardId, params.userId);
+    }
+  );
+
+  const { execute: executeDeleteReward } = useOptimisticUpdate(
+    async (rewardId: string) => {
+      await rewardService.deleteReward(rewardId);
+      return rewardId;
+    }
+  );
+
   const addReward = async (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
+    // Create reward object with default values
+    const newReward: Reward = {
+      id: uuidv4(),
+      claimed: false,
+      createdAt: new Date(),
+      ...reward
+    };
+
+    // Optimistically update UI
+    dispatch({ type: 'ADD_REWARD', payload: newReward });
+
     if (isAuthenticated && pair) {
       try {
         await rewardService.createReward(reward);
-        toast({
-          title: "Reward added!",
-          description: `New reward "${reward.description}" added.`,
+        // Success toast
+        sonnerToast.success("Reward added", {
+          description: `"${reward.description}" has been added`
         });
         // Rewards will be updated via the useRewards hook's realtime subscription
-      } catch (error) {
-        // createReward already shows toast errors
-        // Fallback to local state
-        dispatch({ type: 'ADD_REWARD', payload: reward });
+      } catch (error: any) {
+        console.error("Error creating reward:", error);
+        toast({
+          title: "Error creating reward",
+          description: error.message,
+          variant: "destructive",
+        });
       }
-    } else {
-      dispatch({ type: 'ADD_REWARD', payload: reward });
-      toast({
-        title: "Reward added!",
-        description: `New reward "${reward.description}" added.`,
+    } else if (!isAuthenticated) {
+      sonnerToast.success("Reward added", {
+        description: `"${reward.description}" has been added`
       });
     }
   };
@@ -236,31 +294,33 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
       : localEarnedPoints - state.spentPoints;
       
     if (reward.pointCost > availablePoints) {
-      toast({
-        title: "Not enough points",
+      sonnerToast.error("Not enough points", {
         description: `You need ${reward.pointCost - availablePoints} more points to claim this reward.`,
-        variant: "destructive",
       });
       return;
     }
     
+    // Optimistically update UI
+    dispatch({ type: 'CLAIM_REWARD', payload: { id, userId: user?.id } });
+    
     if (isAuthenticated && user && pair) {
       try {
         await rewardService.claimReward(id, user.id);
-        toast({
-          title: "Reward claimed!",
+        
+        sonnerToast.success("Reward claimed!", {
           description: `You've claimed: ${reward.description}`,
         });
         // Rewards will be updated via the useRewards hook's realtime subscription
-      } catch (error) {
-        // claimReward already shows toast errors
-        // Fallback to local state
-        dispatch({ type: 'CLAIM_REWARD', payload: { id } });
+      } catch (error: any) {
+        console.error("Error claiming reward:", error);
+        toast({
+          title: "Error claiming reward",
+          description: error.message,
+          variant: "destructive",
+        });
       }
     } else {
-      dispatch({ type: 'CLAIM_REWARD', payload: { id } });
-      toast({
-        title: "Reward claimed!",
+      sonnerToast.success("Reward claimed!", {
         description: `You've claimed: ${reward.description}`,
       });
     }
@@ -272,17 +332,34 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    // Find the reward to be deleted for showing in toast
+    const rewardToDelete = state.rewards.find(r => r.id === id);
+    
+    // Optimistically update UI
+    dispatch({ type: 'DELETE_REWARD', payload: { id } });
+    
     if (isAuthenticated && pair) {
       try {
         await rewardService.deleteReward(id);
+        
+        if (rewardToDelete) {
+          sonnerToast.success("Reward deleted", {
+            description: `"${rewardToDelete.description}" has been removed`
+          });
+        }
         // Rewards will be updated via the useRewards hook's realtime subscription
-      } catch (error) {
-        // deleteReward already shows toast errors
-        // Fallback to local state
-        dispatch({ type: 'DELETE_REWARD', payload: { id } });
+      } catch (error: any) {
+        console.error("Error deleting reward:", error);
+        toast({
+          title: "Error deleting reward",
+          description: error.message,
+          variant: "destructive",
+        });
       }
-    } else {
-      dispatch({ type: 'DELETE_REWARD', payload: { id } });
+    } else if (rewardToDelete) {
+      sonnerToast.success("Reward deleted", {
+        description: `"${rewardToDelete.description}" has been removed`
+      });
     }
   };
 
@@ -304,6 +381,8 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
         deleteReward,
         canClaimReward,
         loadingRewards,
+        error,
+        refetchRewards
       }}
     >
       {children}

@@ -1,134 +1,82 @@
 
-import { useState, useEffect } from "react";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserCog } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ProfileSettings } from "@/components/common/ProfileSettings";
+import { PointsDisplay } from "@/components/common/PointsDisplay";
+import { useAuth } from "@/contexts/AuthContext";
 import { TaskList } from "@/components/tasks/TaskList";
 import { RewardList } from "@/components/rewards/RewardList";
-import { Header } from "@/components/common/Header";
-import { useAuth } from "@/contexts/AuthContext";
 import { AuthRequiredBanner } from "@/components/common/AuthRequiredBanner";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { usePair } from "@/hooks/use-supabase-data";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { InviteHandler } from "@/components/common/InviteHandler";
+import { PairedUserBanner } from "@/components/common/PairedUserBanner";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { useMobileView } from "@/hooks/use-mobile";
 
 export function Dashboard() {
-  const { isAuthenticated, user } = useAuth();
-  const [taskPanelSize, setTaskPanelSize] = useState(50);
-  const [rewardPanelSize, setRewardPanelSize] = useState(50);
-  const isMobile = useIsMobile();
-  const { data: pair } = usePair();
-  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState("tasks");
+  const isMobile = useMobileView();
   
-  // On mobile devices, stack the panels vertically with different default sizes
-  const [orientation, setOrientation] = useState<"vertical" | "horizontal">("vertical");
-  
-  useEffect(() => {
-    // On mobile, use a different split ratio (tasks get more space)
-    if (isMobile) {
-      setTaskPanelSize(60);
-      setRewardPanelSize(40);
-      setOrientation("vertical");
-    } else {
-      setTaskPanelSize(50);
-      setRewardPanelSize(50);
-      setOrientation("vertical");
-    }
-  }, [isMobile]);
-
-  // Set up realtime subscriptions for tasks and rewards
-  useEffect(() => {
-    if (!isAuthenticated || !pair?.id) return;
-
-    // Subscribe to task changes
-    const taskChannel = supabase
-      .channel('tasks-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'tasks',
-          filter: `pair_id=eq.${pair.id}`,
-        },
-        (payload) => {
-          console.log('Task change received:', payload);
-          // The TaskList component will handle refetching data
-          toast({
-            title: "Task Updated",
-            description: "A task has been updated by your partner.",
-          });
-        }
-      )
-      .subscribe();
-
-    // Subscribe to reward changes
-    const rewardChannel = supabase
-      .channel('rewards-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all events
-          schema: 'public',
-          table: 'rewards',
-          filter: `pair_id=eq.${pair.id}`,
-        },
-        (payload) => {
-          console.log('Reward change received:', payload);
-          // The RewardList component will handle refetching data
-          toast({
-            title: "Reward Updated",
-            description: "A reward has been updated by your partner.",
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(taskChannel);
-      supabase.removeChannel(rewardChannel);
-    };
-  }, [isAuthenticated, pair?.id, toast]);
-
   return (
-    <div className="flex flex-col h-screen">
-      <Header />
-      
-      <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup
-          direction={orientation}
-          className="min-h-[calc(100vh-64px)]"
-        >
-          <ResizablePanel
-            defaultSize={isMobile ? 60 : 50}
-            minSize={20}
-            onResize={(size) => {
-              setTaskPanelSize(size);
-              setRewardPanelSize(100 - size);
-            }}
-          >
-            <div className="h-full bg-background p-0">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col">
+      <div className="container max-w-5xl px-4 pt-6 pb-20 flex-1">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Track your tasks and rewards together
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3 flex-wrap">
+            {isAuthenticated && <PairedUserBanner />}
+            <div className="flex items-center gap-2">
+              {isAuthenticated && !isMobile && <InviteHandler />}
+              <PointsDisplay />
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="shrink-0">
+                    <UserCog className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <ProfileSettings />
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+        </div>
+        
+        {!isAuthenticated && <AuthRequiredBanner className="mb-6" />}
+        
+        {isAuthenticated && isMobile && (
+          <div className="mb-4 flex justify-center">
+            <InviteHandler />
+          </div>
+        )}
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full mb-4">
+            <TabsTrigger value="tasks" className="flex-1">Tasks</TabsTrigger>
+            <TabsTrigger value="rewards" className="flex-1">Rewards</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="tasks" className="bg-card rounded-lg border border-border shadow-sm">
+            <ErrorBoundary>
               <TaskList />
-            </div>
-          </ResizablePanel>
+            </ErrorBoundary>
+          </TabsContent>
           
-          <ResizableHandle withHandle />
-          
-          <ResizablePanel 
-            defaultSize={isMobile ? 40 : 50}
-            minSize={20}
-            onResize={(size) => {
-              setRewardPanelSize(size);
-              setTaskPanelSize(100 - size);
-            }}
-          >
-            <div className="h-full bg-background p-0">
+          <TabsContent value="rewards" className="bg-card rounded-lg border border-border shadow-sm">
+            <ErrorBoundary>
               <RewardList />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            </ErrorBoundary>
+          </TabsContent>
+        </Tabs>
       </div>
-      
-      {!isAuthenticated && <AuthRequiredBanner />}
     </div>
   );
 }
