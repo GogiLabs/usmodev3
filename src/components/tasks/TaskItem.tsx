@@ -148,7 +148,8 @@ export function TaskItem({ task }: TaskItemProps) {
         </div>
       )}
 
-      <style jsx>{`
+      <style>
+        {`
         .confetti-container {
           pointer-events: none;
         }
@@ -167,7 +168,8 @@ export function TaskItem({ task }: TaskItemProps) {
             opacity: 0;
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }

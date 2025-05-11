@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
 import { Task, TaskTag } from '@/types/Task';
 import { v4 as uuidv4 } from 'uuid';
@@ -227,7 +226,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   // Setup optimistic updates
   const { execute: executeAddTask } = useOptimisticUpdate(
     async (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => {
-      if (!pairId) {
+      if (!pair) {
         throw new Error("Cannot create task: No pair ID");
       }
       return await taskService.createTask(task);

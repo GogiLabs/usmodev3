@@ -13,12 +13,12 @@ import { AuthRequiredBanner } from "@/components/common/AuthRequiredBanner";
 import { InviteHandler } from "@/components/common/InviteHandler";
 import { PairedUserBanner } from "@/components/common/PairedUserBanner";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
-import { useMobileView } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function Dashboard() {
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("tasks");
-  const isMobile = useMobileView();
+  const isMobile = useIsMobile();
   
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col">
@@ -50,7 +50,7 @@ export function Dashboard() {
           </div>
         </div>
         
-        {!isAuthenticated && <AuthRequiredBanner className="mb-6" />}
+        {!isAuthenticated && <AuthRequiredBanner />}
         
         {isAuthenticated && isMobile && (
           <div className="mb-4 flex justify-center">

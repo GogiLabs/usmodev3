@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
 import { Reward } from '@/types/Reward';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,7 +7,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { useRewards, usePair, usePairPoints } from '@/hooks/use-supabase-data';
 import { useRewardService, mapDbRewardToAppReward } from '@/services/rewardService';
 import { useOptimisticUpdate } from '@/hooks/use-optimistic-update';
-import { Sonner } from '@/components/ui/sonner';
 import { toast as sonnerToast } from 'sonner';
 
 interface RewardState {

@@ -172,7 +172,8 @@ export function RewardItem({ reward }: RewardItemProps) {
         </div>
       )}
 
-      <style jsx>{`
+      <style>
+        {`
         .confetti-container {
           pointer-events: none;
         }
@@ -191,7 +192,8 @@ export function RewardItem({ reward }: RewardItemProps) {
             opacity: 0;
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }
