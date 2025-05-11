@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useReward } from "@/contexts/RewardContext";
+import { useReward } from "@/contexts/reward/RewardContext";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

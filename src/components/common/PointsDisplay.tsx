@@ -1,6 +1,6 @@
 
-import { useTask } from "@/contexts/TaskContext";
-import { useReward } from "@/contexts/RewardContext";
+import { useTask } from "@/contexts/task/TaskContext";
+import { useReward } from "@/contexts/reward/RewardContext";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
