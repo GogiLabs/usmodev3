@@ -2,9 +2,35 @@
 import { useTask } from "@/contexts/TaskContext";
 import { TaskItem } from "./TaskItem";
 import { TaskForm } from "./TaskForm";
+import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function TaskList() {
-  const { tasks } = useTask();
+  const { tasks, loadingTasks } = useTask();
+  
+  if (loadingTasks) {
+    return (
+      <div className="h-full overflow-y-auto px-4 py-4">
+        <div className="mb-4 flex justify-center">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        </div>
+        {/* Loading skeleton UI */}
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={`task-skeleton-${i}`} className="flex items-center justify-between p-4 border rounded-lg mb-2">
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-8" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  
   const incompleteTasks = tasks.filter(task => !task.completed);
   const completedTasks = tasks.filter(task => task.completed);
 

@@ -1,10 +1,12 @@
 
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import { Reward } from '@/types/Reward';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
 import { useTask } from './TaskContext';
 import { useToast } from '@/components/ui/use-toast';
+import { useRewards, usePair, usePairPoints } from '@/hooks/use-supabase-data';
+import { useRewardService, mapDbRewardToAppReward } from '@/services/rewardService';
 
 interface RewardState {
   rewards: Reward[];
@@ -15,7 +17,8 @@ type RewardAction =
   | { type: 'ADD_REWARD'; payload: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'> }
   | { type: 'CLAIM_REWARD'; payload: { id: string } }
   | { type: 'DELETE_REWARD'; payload: { id: string } }
-  | { type: 'LOAD_REWARDS'; payload: RewardState };
+  | { type: 'LOAD_REWARDS'; payload: RewardState }
+  | { type: 'SYNC_DB_REWARDS'; payload: Reward[] };
 
 interface RewardContextType {
   rewards: Reward[];
@@ -24,6 +27,7 @@ interface RewardContextType {
   claimReward: (id: string) => void;
   deleteReward: (id: string) => void;
   canClaimReward: (pointCost: number) => boolean;
+  loadingRewards: boolean;
 }
 
 const RewardContext = createContext<RewardContextType | undefined>(undefined);
@@ -86,11 +90,21 @@ const rewardReducer = (state: RewardState, action: RewardAction): RewardState =>
       updatedState = action.payload;
       break;
       
+    case 'SYNC_DB_REWARDS':
+      updatedState = {
+        rewards: action.payload,
+        // Calculate spent points from claimed rewards
+        spentPoints: action.payload.reduce(
+          (total, reward) => total + (reward.claimed ? reward.pointCost : 0), 0
+        ),
+      };
+      break;
+      
     default:
       return state;
   }
   
-  // Save to localStorage whenever state changes
+  // Save to localStorage whenever state changes (but only if not using DB)
   localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(updatedState));
   return updatedState;
 };
@@ -150,20 +164,64 @@ const initializeState = (): RewardState => {
 
 export const RewardProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(rewardReducer, null, initializeState);
+  const [loadingRewards, setLoadingRewards] = useState(false);
 
-  const { isAuthenticated, showAuthRequiredToast } = useAuth();
-  const { earnedPoints } = useTask();
+  const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
+  const { earnedPoints: localEarnedPoints } = useTask();
   const { toast } = useToast();
+  
+  const { data: pair } = usePair();
+  const { data: dbRewards, isLoading: dbRewardsLoading } = useRewards(pair?.id);
+  const { data: pairPoints } = usePairPoints(pair?.id);
+  const rewardService = useRewardService(pair?.id);
 
-  const addReward = (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
-    dispatch({ type: 'ADD_REWARD', payload: reward });
-    toast({
-      title: "Reward added!",
-      description: `New reward "${reward.description}" added.`,
-    });
+  // Sync with Supabase when authenticated and we have DB rewards
+  useEffect(() => {
+    if (isAuthenticated && dbRewards && pair) {
+      setLoadingRewards(true);
+      
+      // Map DB rewards to app format
+      const appRewards = dbRewards.map(mapDbRewardToAppReward);
+      
+      // Update local state with DB rewards
+      dispatch({ type: 'SYNC_DB_REWARDS', payload: appRewards });
+      setLoadingRewards(false);
+    }
+  }, [isAuthenticated, dbRewards, pair]);
+
+  // Update loading state based on DB loading
+  useEffect(() => {
+    if (isAuthenticated && pair) {
+      setLoadingRewards(dbRewardsLoading);
+    } else {
+      setLoadingRewards(false);
+    }
+  }, [isAuthenticated, dbRewardsLoading, pair]);
+
+  const addReward = async (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
+    if (isAuthenticated && pair) {
+      try {
+        await rewardService.createReward(reward);
+        toast({
+          title: "Reward added!",
+          description: `New reward "${reward.description}" added.`,
+        });
+        // Rewards will be updated via the useRewards hook's realtime subscription
+      } catch (error) {
+        // createReward already shows toast errors
+        // Fallback to local state
+        dispatch({ type: 'ADD_REWARD', payload: reward });
+      }
+    } else {
+      dispatch({ type: 'ADD_REWARD', payload: reward });
+      toast({
+        title: "Reward added!",
+        description: `New reward "${reward.description}" added.`,
+      });
+    }
   };
 
-  const claimReward = (id: string) => {
+  const claimReward = async (id: string) => {
     if (!isAuthenticated) {
       showAuthRequiredToast();
       return;
@@ -172,7 +230,11 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
     const reward = state.rewards.find(r => r.id === id);
     if (!reward) return;
     
-    const availablePoints = earnedPoints - state.spentPoints;
+    // Check if user has enough points
+    const availablePoints = isAuthenticated && pairPoints 
+      ? pairPoints.available 
+      : localEarnedPoints - state.spentPoints;
+      
     if (reward.pointCost > availablePoints) {
       toast({
         title: "Not enough points",
@@ -182,19 +244,54 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    dispatch({ type: 'CLAIM_REWARD', payload: { id } });
-    toast({
-      title: "Reward claimed!",
-      description: `You've claimed: ${reward.description}`,
-    });
+    if (isAuthenticated && user && pair) {
+      try {
+        await rewardService.claimReward(id, user.id);
+        toast({
+          title: "Reward claimed!",
+          description: `You've claimed: ${reward.description}`,
+        });
+        // Rewards will be updated via the useRewards hook's realtime subscription
+      } catch (error) {
+        // claimReward already shows toast errors
+        // Fallback to local state
+        dispatch({ type: 'CLAIM_REWARD', payload: { id } });
+      }
+    } else {
+      dispatch({ type: 'CLAIM_REWARD', payload: { id } });
+      toast({
+        title: "Reward claimed!",
+        description: `You've claimed: ${reward.description}`,
+      });
+    }
   };
 
-  const deleteReward = (id: string) => {
-    dispatch({ type: 'DELETE_REWARD', payload: { id } });
+  const deleteReward = async (id: string) => {
+    if (!isAuthenticated) {
+      showAuthRequiredToast();
+      return;
+    }
+
+    if (isAuthenticated && pair) {
+      try {
+        await rewardService.deleteReward(id);
+        // Rewards will be updated via the useRewards hook's realtime subscription
+      } catch (error) {
+        // deleteReward already shows toast errors
+        // Fallback to local state
+        dispatch({ type: 'DELETE_REWARD', payload: { id } });
+      }
+    } else {
+      dispatch({ type: 'DELETE_REWARD', payload: { id } });
+    }
   };
 
   const canClaimReward = (pointCost: number): boolean => {
-    return (earnedPoints - state.spentPoints) >= pointCost;
+    const availablePoints = isAuthenticated && pairPoints 
+      ? pairPoints.available 
+      : localEarnedPoints - state.spentPoints;
+      
+    return availablePoints >= pointCost;
   };
 
   return (
@@ -206,6 +303,7 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
         claimReward,
         deleteReward,
         canClaimReward,
+        loadingRewards,
       }}
     >
       {children}

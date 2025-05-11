@@ -1,8 +1,12 @@
 
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import { Task, TaskTag } from '@/types/Task';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
+import { useTasks } from '@/hooks/use-supabase-data';
+import { useTaskService, mapDbTaskToAppTask } from '@/services/taskService';
+import { usePair } from '@/hooks/use-supabase-data';
+import { toast } from '@/components/ui/use-toast';
 
 interface TaskState {
   tasks: Task[];
@@ -13,7 +17,8 @@ type TaskAction =
   | { type: 'ADD_TASK'; payload: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'> }
   | { type: 'COMPLETE_TASK'; payload: { id: string } }
   | { type: 'DELETE_TASK'; payload: { id: string } }
-  | { type: 'LOAD_TASKS'; payload: TaskState };
+  | { type: 'LOAD_TASKS'; payload: TaskState }
+  | { type: 'SYNC_DB_TASKS'; payload: Task[] };
 
 interface TaskContextType {
   tasks: Task[];
@@ -22,6 +27,7 @@ interface TaskContextType {
   completeTask: (id: string) => void;
   deleteTask: (id: string) => void;
   getTagColor: (tag: TaskTag) => string;
+  loadingTasks: boolean;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -83,12 +89,22 @@ const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
     case 'LOAD_TASKS':
       updatedState = action.payload;
       break;
+
+    case 'SYNC_DB_TASKS':
+      updatedState = {
+        tasks: action.payload,
+        // Calculate earned points from completed tasks
+        earnedPoints: action.payload.reduce(
+          (total, task) => total + (task.completed ? task.points : 0), 0
+        ),
+      };
+      break;
       
     default:
       return state;
   }
   
-  // Save to localStorage whenever state changes
+  // Save to localStorage whenever state changes (but only when not using DB)
   localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(updatedState));
   return updatedState;
 };
@@ -151,23 +167,87 @@ const initializeState = (): TaskState => {
 
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(taskReducer, null, initializeState);
+  const [loadingTasks, setLoadingTasks] = useState(false);
 
-  const { isAuthenticated, showAuthRequiredToast } = useAuth();
+  const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
+  const { data: pair } = usePair();
+  const { data: dbTasks, isLoading: dbTasksLoading } = useTasks(pair?.id);
+  const taskService = useTaskService(pair?.id);
 
-  const addTask = (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => {
-    dispatch({ type: 'ADD_TASK', payload: task });
-  };
+  // Sync with Supabase when authenticated and we have DB tasks
+  useEffect(() => {
+    if (isAuthenticated && dbTasks && pair) {
+      setLoadingTasks(true);
+      
+      // Map DB tasks to app format
+      const appTasks = dbTasks.map(mapDbTaskToAppTask);
+      
+      // Update local state with DB tasks
+      dispatch({ type: 'SYNC_DB_TASKS', payload: appTasks });
+      setLoadingTasks(false);
+    }
+  }, [isAuthenticated, dbTasks, pair]);
 
-  const completeTask = (id: string) => {
-    if (isAuthenticated) {
-      dispatch({ type: 'COMPLETE_TASK', payload: { id } });
+  // Update loading state based on DB loading
+  useEffect(() => {
+    if (isAuthenticated && pair) {
+      setLoadingTasks(dbTasksLoading);
     } else {
-      showAuthRequiredToast();
+      setLoadingTasks(false);
+    }
+  }, [isAuthenticated, dbTasksLoading, pair]);
+
+  const addTask = async (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => {
+    if (isAuthenticated && pair) {
+      try {
+        await taskService.createTask(task);
+        // Tasks will be updated via the useTasks hook's realtime subscription
+      } catch (error) {
+        // createTask already shows toast errors
+        // Fallback to local state
+        dispatch({ type: 'ADD_TASK', payload: task });
+      }
+    } else {
+      dispatch({ type: 'ADD_TASK', payload: task });
     }
   };
 
-  const deleteTask = (id: string) => {
-    dispatch({ type: 'DELETE_TASK', payload: { id } });
+  const completeTask = async (id: string) => {
+    if (isAuthenticated && user && pair) {
+      try {
+        await taskService.completeTask(id, user.id);
+        // Tasks will be updated via the useTasks hook's realtime subscription
+      } catch (error) {
+        // completeTask already shows toast errors
+        // Fallback to local state
+        dispatch({ type: 'COMPLETE_TASK', payload: { id } });
+      }
+    } else {
+      if (isAuthenticated) {
+        showAuthRequiredToast();
+      } else {
+        dispatch({ type: 'COMPLETE_TASK', payload: { id } });
+      }
+    }
+  };
+
+  const deleteTask = async (id: string) => {
+    if (isAuthenticated && pair) {
+      try {
+        await taskService.deleteTask(id);
+        // Tasks will be updated via the useTasks hook's realtime subscription
+      } catch (error) {
+        // deleteTask already shows toast errors
+        // Fallback to local state
+        dispatch({ type: 'DELETE_TASK', payload: { id } });
+      }
+    } else {
+      if (isAuthenticated) {
+        showAuthRequiredToast();
+      } else {
+        dispatch({ type: 'DELETE_TASK', payload: { id } });
+      }
+    }
   };
 
   // Tag color mapping
@@ -196,6 +276,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         completeTask,
         deleteTask,
         getTagColor,
+        loadingTasks,
       }}
     >
       {children}
