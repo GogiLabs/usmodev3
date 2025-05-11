@@ -30,7 +30,7 @@ export const mapAppTaskToDbTask = (task: Omit<Task, 'id' | 'completed' | 'create
 };
 
 export const useTaskService = (pairId?: string) => {
-  const { softDelete } = useSoftDelete();
+  const { softDelete } = useSoftDelete("tasks");
   const { toast } = useToast();
 
   const createTask = async (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => {
@@ -82,7 +82,7 @@ export const useTaskService = (pairId?: string) => {
 
   const deleteTask = async (taskId: string) => {
     try {
-      await softDelete('tasks', taskId);
+      await softDelete(taskId);
     } catch (error: any) {
       console.error("Error deleting task:", error);
       toast({

@@ -31,7 +31,7 @@ export const mapAppRewardToDbReward = (
 };
 
 export const useRewardService = (pairId?: string) => {
-  const { softDelete } = useSoftDelete();
+  const { softDelete } = useSoftDelete("rewards");
   const { toast } = useToast();
 
   const createReward = async (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
@@ -83,7 +83,7 @@ export const useRewardService = (pairId?: string) => {
 
   const deleteReward = async (rewardId: string) => {
     try {
-      await softDelete('rewards', rewardId);
+      await softDelete(rewardId);
     } catch (error: any) {
       console.error("Error deleting reward:", error);
       toast({
