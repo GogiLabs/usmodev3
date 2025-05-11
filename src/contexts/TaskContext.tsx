@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
 import { Task, TaskTag } from '@/types/Task';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,7 +8,6 @@ import { useTaskService, mapDbTaskToAppTask } from '@/services/taskService';
 import { usePair } from '@/hooks/use-supabase-data';
 import { useToast } from '@/components/ui/use-toast';
 import { useOptimisticUpdate } from '@/hooks/use-optimistic-update';
-import { Sonner } from '@/components/ui/sonner';
 import { toast as sonnerToast } from 'sonner';
 
 interface TaskState {
