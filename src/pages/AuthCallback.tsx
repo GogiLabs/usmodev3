@@ -14,7 +14,7 @@ const AuthCallback = () => {
       
       if (error) {
         toast({
-          title: "Authentication Error",
+          title: "Authentication error",
           description: error.message,
           variant: "destructive",
         });
