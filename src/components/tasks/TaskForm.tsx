@@ -85,13 +85,26 @@ export function TaskForm() {
                 <FormItem>
                   <FormLabel>Points</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Select
+                      onValueChange={(value) => field.onChange(Number(value))}
+                      defaultValue={field.value.toString()}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select points" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 5, 10].map((point) => (
+                          <SelectItem key={point} value={point.toString()}>
+                            {point}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
             <FormField
               control={form.control}
               name="tag"
