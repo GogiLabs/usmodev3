@@ -51,22 +51,26 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <TaskProvider>
-            <RewardProvider>
-              <AppRoutes />
-            </RewardProvider>
-          </TaskProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <div className="w-full max-w-[430px] h-screen mx-auto shadow-lg overflow-hidden bg-white">
+          <BrowserRouter>
+            <AuthProvider>
+              <TaskProvider>
+                <RewardProvider>
+                  <AppRoutes />
+                </RewardProvider>
+              </TaskProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </div>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
