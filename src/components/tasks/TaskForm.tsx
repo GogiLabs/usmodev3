@@ -61,33 +61,37 @@ export function TaskForm() {
   
   return (
     <div className="p-4 border rounded-lg mb-4">
-        <FormField
-          control={form.control}
-          name="points"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Points</FormLabel>
-              <FormControl>
-                <Select
-                  onValueChange={(value) => field.onChange(Number(value))}
-                  defaultValue={field.value.toString()}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select points" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 5, 10].map((point) => (
-                      <SelectItem key={point} value={point.toString()}>
-                        {point}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+  control={form.control}
+  name="points"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Points</FormLabel>
+      <FormControl>
+        <Select
+          onValueChange={(value) => field.onChange(Number(value))}
+          defaultValue={field.value.toString()}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select points" />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 5, 10].map((point) => (
+              <SelectItem key={point} value={point.toString()}>
+                {point}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+          
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
