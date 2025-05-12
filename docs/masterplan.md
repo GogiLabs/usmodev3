@@ -6,7 +6,7 @@ Us Mode is a shared productivity app designed for couples who want to manage hou
 
 ## Target Audience
 
-* Couples looking to share and balance household responsibilities
+* Couple looking to share and balance household responsibilities
 * Partners who enjoy gamification in daily life
 * Relationship-focused users who want light productivity tools with a warm, romantic design touch
 
