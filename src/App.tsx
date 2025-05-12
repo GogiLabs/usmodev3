@@ -56,7 +56,6 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <div className="w-full max-w-[430px] h-screen mx-auto shadow-lg overflow-hidden bg-white">
       <BrowserRouter>
         <AuthProvider>
           <TaskProvider>
