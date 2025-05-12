@@ -67,7 +67,7 @@ export function Dashboard() {
         </div>
       </div>
       
-      {!isAuthenticated && <AuthRequiredBanner />}
+      {/*!isAuthenticated && <AuthRequiredBanner />*/}
       
       {/* Show pair prompt for authenticated but unpaired users */}
       {isAuthenticated && !isPaired && !pairLoading && (
