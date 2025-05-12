@@ -37,9 +37,7 @@ const InvitePage = () => {
             transition={{ duration: 0.3 }}
           >
             <NetworkErrorAlert
-              icon={<WifiOff className="h-4 w-4" />}
               message="You're currently offline. Some features may be unavailable." 
-              variant="warning"
               onRetry={() => window.location.reload()}
               retryLabel="Refresh Page"
             />

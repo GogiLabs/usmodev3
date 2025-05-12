@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 interface NetworkErrorAlertProps {
   message?: string;
   onRetry?: () => void;
+  retryLabel?: string;
 }
 
 export function NetworkErrorAlert({ 
   message = "There was a problem connecting to the server. Please check your internet connection.", 
-  onRetry 
+  onRetry,
+  retryLabel = "Retry"
 }: NetworkErrorAlertProps) {
   return (
     <Alert variant="destructive" className="mb-4">
@@ -25,7 +27,7 @@ export function NetworkErrorAlert({
             className="mt-2" 
             onClick={onRetry}
           >
-            <RefreshCw className="mr-2 h-4 w-4" /> Retry
+            <RefreshCw className="mr-2 h-4 w-4" /> {retryLabel}
           </Button>
         )}
       </AlertDescription>
