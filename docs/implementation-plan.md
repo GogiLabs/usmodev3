@@ -2,7 +2,7 @@
 
 ## Phase 1: UI Prototype (Local State)
 
-* Set up Vite + React + Tailwind project
+* Set up Vite + React + Tailwind project 
 * Implement static versions of:
 
   * Landing Page
