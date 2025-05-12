@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { useConnectionStatus } from '@/hooks/use-connection-status';
 import { Database } from '@/integrations/supabase/types';
-import { useConnectionStatus } from '@/components/ui/use-connection-status';
 
 // Define type for pair data from Supabase
 export type Pair = Database['public']['Tables']['pairs']['Row'];
