@@ -13,21 +13,34 @@ import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import { TaskProvider } from "./contexts/task/TaskContext";
 import { RewardProvider } from "./contexts/reward/RewardContext";
 import { NetworkStatusIndicator } from "./components/common/NetworkStatusIndicator";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { lazy, Suspense } from "react";
+import { LoadingSpinner } from "./components/common/LoadingSpinner";
 
+// Configure React Query with better error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnReconnect: "always",
     },
   },
 });
 
-// Protected Route Component
+// Protected Route Component with better loading state
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoadingSpinner size="lg" text="Authenticating..." />
+      </div>
+    );
+  }
   
   return isAuthenticated ? <>{children}</> : <Navigate to="/auth" />;
 };
@@ -55,24 +68,26 @@ const AppRoutes = () => {
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <div className="w-full max-w-[430px] h-screen mx-auto shadow-lg overflow-hidden bg-white">
-          <BrowserRouter>
-            <AuthProvider>
-              <TaskProvider>
-                <RewardProvider>
-                  <AppRoutes />
-                  <NetworkStatusIndicator />
-                </RewardProvider>
-              </TaskProvider>
-            </AuthProvider>
-          </BrowserRouter>
-        </div>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <div className="w-full max-w-[430px] h-screen mx-auto shadow-lg overflow-hidden bg-white">
+            <BrowserRouter>
+              <AuthProvider>
+                <TaskProvider>
+                  <RewardProvider>
+                    <AppRoutes />
+                    <NetworkStatusIndicator />
+                  </RewardProvider>
+                </TaskProvider>
+              </AuthProvider>
+            </BrowserRouter>
+          </div>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

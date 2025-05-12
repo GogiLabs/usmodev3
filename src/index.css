@@ -95,3 +95,142 @@
 /* Import Inter font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* Add animation and transition utilities */
+@layer utilities {
+  /* Fade animations */
+  .fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  
+  .fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+  }
+  
+  /* Scale animations */
+  .scale-in {
+    animation: scaleIn 0.2s ease-out forwards;
+  }
+  
+  .scale-out {
+    animation: scaleOut 0.2s ease-out forwards;
+  }
+  
+  /* Hover effects */
+  .hover-lift {
+    @apply transition-transform duration-200;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+  
+  .hover-scale {
+    @apply transition-transform duration-200;
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.03);
+  }
+  
+  /* Card transitions */
+  .card-transition {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  /* Button press effect */
+  .press-effect:active {
+    transform: scale(0.97);
+  }
+  
+  /* Smooth border transitions */
+  .border-transition {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  /* Focus ring transitions */
+  .focus-ring {
+    @apply outline-none ring-offset-2 transition-shadow duration-200;
+  }
+  
+  .focus-ring:focus-visible {
+    @apply ring-2 ring-accent;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Confetti animation for celebrations */
+@keyframes confettiDrop {
+  0% {
+    transform: translateY(-10px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(60px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Shimmer effect for loading states */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

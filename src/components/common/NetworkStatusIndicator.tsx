@@ -1,99 +1,78 @@
-import { useState, useEffect } from "react";
-import { Wifi, WifiOff, RefreshCw } from "lucide-react";
+
+import { useEffect, useState } from "react";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { WifiOff, Wifi, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface NetworkStatusIndicatorProps {
-  className?: string;
-}
-
-export function NetworkStatusIndicator({ className }: NetworkStatusIndicatorProps) {
+export function NetworkStatusIndicator() {
   const { isOnline, isOffline } = useConnectionStatus();
-  const [isVisible, setIsVisible] = useState(false);
-  const [showOfflineTooltip, setShowOfflineTooltip] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [recentlyChanged, setRecentlyChanged] = useState(false);
   
-  // Only show when offline or when recently changed to online
   useEffect(() => {
-    if (isOffline) {
-      setIsVisible(true);
-      setShowOfflineTooltip(true);
-      
-      // After 5 seconds, hide the offline tooltip but keep the indicator
-      const timer = setTimeout(() => {
-        setShowOfflineTooltip(false);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    } else {
-      // When online, show for 3 seconds then hide
-      setIsVisible(true);
-      setShowOfflineTooltip(false);
-      
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isOffline, isOnline]);
+    // Show indicator on network status change
+    setVisible(true);
+    setRecentlyChanged(true);
+    
+    // Hide automatically after 5 seconds, but only for online status
+    const timer = setTimeout(() => {
+      if (isOnline) setVisible(false);
+      setRecentlyChanged(false);
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, [isOnline, isOffline]);
   
-  // Force a refresh of the page
-  const handleRefresh = () => {
-    window.location.reload();
+  const handleDismiss = () => {
+    setVisible(false);
   };
   
+  if (!visible) return null;
+
   return (
     <AnimatePresence>
-      {(isVisible || isOffline) && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          transition={{ duration: 0.2 }}
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 50 }}
+        className="fixed bottom-4 inset-x-0 flex justify-center z-50 px-4"
+        style={{ maxWidth: "430px", margin: "0 auto" }}
+      >
+        <div 
           className={cn(
-            "fixed bottom-4 right-4 z-50",
-            className
+            "flex items-center gap-2 py-2 px-4 rounded-full shadow-lg",
+            isOnline 
+              ? "bg-green-500 text-white"
+              : "bg-red-500 text-white"
           )}
         >
-          <TooltipProvider>
-            <Tooltip open={isOffline && showOfflineTooltip}>
-              <TooltipTrigger asChild>
-                <motion.div 
-                  className={cn(
-                    "p-2 rounded-full shadow-md flex items-center justify-center",
-                    isOffline ? "bg-red-100" : "bg-green-100"
-                  )}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={isOffline ? handleRefresh : undefined}
-                >
-                  {isOffline ? (
-                    <div className="flex items-center gap-1">
-                      <WifiOff className="h-5 w-5 text-red-600" />
-                      <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <Wifi className="h-5 w-5 text-green-600" />
-                  )}
-                </motion.div>
-              </TooltipTrigger>
-              
-              {isOffline && (
-                <TooltipContent side="top">
-                  <p>You are offline. Tap to refresh.</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-        </motion.div>
-      )}
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 0.5 }}
+          >
+            {isOnline ? (
+              <Wifi className="h-4 w-4" />
+            ) : (
+              <WifiOff className="h-4 w-4" />
+            )}
+          </motion.div>
+          
+          <span className="text-sm font-medium">
+            {isOnline ? "Back online" : "You're offline"}
+          </span>
+          
+          {(isOnline || !recentlyChanged) && (
+            <button 
+              onClick={handleDismiss}
+              className="ml-2 p-1 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 }
