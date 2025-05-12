@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { Send, AlertCircle } from "lucide-react";
+import { Send, AlertCircle, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -14,8 +14,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
-export function InviteHandler() {
+interface InviteHandlerProps {
+  compact?: boolean;
+}
+
+export function InviteHandler({ compact = false }: InviteHandlerProps) {
   const [email, setEmail] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,11 +41,15 @@ export function InviteHandler() {
       setLoading(true);
       
       // First check if a pair already exists
-      const { data: existingPair } = await supabase
+      const { data: existingPair, error: pairError } = await supabase
         .from("pairs")
         .select("id")
         .or(`user_1_id.eq.${user?.id},user_2_id.eq.${user?.id}`)
         .maybeSingle();
+
+      if (pairError) {
+        throw new Error(pairError.message);
+      }
 
       if (existingPair) {
         toast({
@@ -52,13 +61,17 @@ export function InviteHandler() {
       }
 
       // Then check for existing invites
-      const { data: existingInvite } = await supabase
+      const { data: existingInvite, error: inviteError } = await supabase
         .from("invites")
         .select("id")
         .eq("sender_id", user?.id)
         .eq("recipient_email", email)
         .eq("status", "pending")
         .maybeSingle();
+
+      if (inviteError) {
+        throw new Error(inviteError.message);
+      }
 
       if (existingInvite) {
         toast({
@@ -70,10 +83,14 @@ export function InviteHandler() {
       }
 
       // Check the rate limit by calling the function
-      const { data: withinRateLimit } = await supabase.rpc(
+      const { data: withinRateLimit, error: rateLimitError } = await supabase.rpc(
         "check_invite_rate_limit", 
         { sender_id: user?.id }
       );
+      
+      if (rateLimitError) {
+        throw new Error(rateLimitError.message);
+      }
       
       if (!withinRateLimit) {
         toast({
@@ -85,16 +102,16 @@ export function InviteHandler() {
       }
       
       // Create a new pair with only the current user
-      const { data: pair, error: pairError } = await supabase
+      const { data: pair, error: newPairError } = await supabase
         .from("pairs")
         .insert({ user_1_id: user?.id })
         .select()
         .single();
 
-      if (pairError) throw pairError;
+      if (newPairError) throw new Error(newPairError.message);
 
       // Send the invite
-      const { error: inviteError } = await supabase
+      const { error: newInviteError } = await supabase
         .from("invites")
         .insert({
           pair_id: pair.id,
@@ -102,7 +119,7 @@ export function InviteHandler() {
           recipient_email: email,
         });
 
-      if (inviteError) throw inviteError;
+      if (newInviteError) throw new Error(newInviteError.message);
 
       toast({
         title: "Invite sent!",
@@ -112,6 +129,7 @@ export function InviteHandler() {
       setEmail("");
       setOpen(false);
     } catch (error: any) {
+      console.error("Error sending invite:", error);
       toast({
         title: "Failed to send invite",
         description: error.message || "An unexpected error occurred",
@@ -125,10 +143,17 @@ export function InviteHandler() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="text-accent">
-          <Send className="h-4 w-4 mr-2" />
-          Invite Partner
-        </Button>
+        {compact ? (
+          <Button variant="outline" size="sm" className="h-8 px-3">
+            <Mail className="h-4 w-4 mr-1" />
+            <span className="text-xs">Invite</span>
+          </Button>
+        ) : (
+          <Button variant="secondary" className="text-accent w-full sm:w-auto">
+            <Send className="h-4 w-4 mr-2" />
+            Invite Partner
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -144,9 +169,20 @@ export function InviteHandler() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !loading) {
+                  e.preventDefault();
+                  handleInvite();
+                }
+              }}
             />
             <Button onClick={handleInvite} disabled={loading}>
-              {loading ? "Sending..." : "Send"}
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Sending...
+                </>
+              ) : "Send"}
             </Button>
           </div>
           <div className="flex items-start text-sm text-muted-foreground">

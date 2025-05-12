@@ -18,16 +18,35 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
   const { user, isAuthenticated } = useAuth();
   const [error, setError] = useState<Error | null>(null);
 
+  const clearError = () => setError(null);
+
   const acceptInvite = async () => {
-    if (!isAuthenticated || !user || !inviteId || !inviteData?.pair_id) {
-      const errorMessage = !isAuthenticated 
-        ? "You must be logged in to accept this invitation."
-        : !inviteId
-        ? "No invitation ID provided."
-        : !inviteData?.pair_id
-        ? "Invalid invitation data."
-        : "Unknown error accepting invitation.";
-        
+    if (!isAuthenticated || !user) {
+      const errorMessage = "You must be logged in to accept this invitation.";
+      setError(new Error(errorMessage));
+      
+      toast({
+        title: "Authentication Required",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return null;
+    }
+    
+    if (!inviteId) {
+      const errorMessage = "No invitation ID provided.";
+      setError(new Error(errorMessage));
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return null;
+    }
+    
+    if (!inviteData?.pair_id) {
+      const errorMessage = "Invalid invitation data.";
       setError(new Error(errorMessage));
       
       toast({
@@ -40,30 +59,45 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
     
     try {
       setLoading(true);
-      setError(null);
+      clearError();
+      
+      // Check invitation status once more before accepting
+      const { data: invite, error: checkError } = await supabase
+        .from('invites')
+        .select('status, expires_at')
+        .eq('id', inviteId)
+        .maybeSingle();
+      
+      if (checkError) {
+        throw new Error(checkError.message || "Failed to verify invitation status");
+      }
+      
+      if (!invite) {
+        throw new Error("Invitation not found");
+      }
+      
+      if (invite.status === 'expired' || new Date(invite.expires_at) < new Date()) {
+        throw new Error("This invitation has expired");
+      }
+      
+      if (invite.status === 'accepted') {
+        throw new Error("This invitation has already been accepted");
+      }
       
       // Check if user is already in a pair
       const { data: existingPair, error: pairError } = await supabase
         .from('pairs')
         .select('id')
         .or(`user_1_id.eq.${user.id},user_2_id.eq.${user.id}`)
-        .single();
+        .maybeSingle();
       
       if (pairError && pairError.code !== 'PGRST116') {
         // PGRST116 means "no rows returned" which is actually what we want
-        throw pairError;
+        throw new Error(pairError.message || "Failed to check existing pairs");
       }
       
       if (existingPair && existingPair.id !== inviteData.pair_id) {
-        const error = new Error("You are already paired with someone else.");
-        setError(error);
-        
-        toast({
-          title: "Already paired",
-          description: "You are already paired with someone else.",
-          variant: "destructive",
-        });
-        return null;
+        throw new Error("You are already paired with someone else.");
       }
       
       // Begin transaction to update pair and invitation status
@@ -73,7 +107,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         .eq('id', inviteData.pair_id);
       
       if (updateError) {
-        throw updateError;
+        throw new Error(updateError.message || "Failed to update pair");
       }
       
       // Mark invitation as accepted
@@ -83,7 +117,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         .eq('id', inviteId);
       
       if (inviteError) {
-        throw inviteError;
+        throw new Error(inviteError.message || "Failed to update invitation status");
       }
       
       // Success!
@@ -115,6 +149,6 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
     acceptInvite, 
     loading, 
     error,
-    clearError: () => setError(null)
+    clearError
   };
 };

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 type InviteStatus = 'checking' | 'valid' | 'invalid' | 'accepted' | 'expired';
 
@@ -16,6 +17,7 @@ export const useInviteValidation = (inviteId: string | null) => {
   const [inviteData, setInviteData] = useState<InviteData>(null);
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const { toast } = useToast();
 
   // Function to retry validation
   const refetch = () => {
@@ -46,20 +48,34 @@ export const useInviteValidation = (inviteId: string | null) => {
             sender_id
           `)
           .eq('id', inviteId)
-          .single();
+          .maybeSingle();
           
-        if (inviteError || !invite) {
+        if (inviteError) {
           console.error("Error fetching invite:", inviteError);
+          throw new Error(inviteError.message || "Failed to fetch invitation details");
+        }
+        
+        if (!invite) {
           setStatus('invalid');
-          if (inviteError) {
-            setError(new Error(inviteError.message));
-          }
           return;
         }
         
         // Check if invite is expired
         if (invite.status === 'expired' || new Date(invite.expires_at) < new Date()) {
           setStatus('expired');
+          
+          // If it's expired but not marked as such in the database, update it
+          if (invite.status !== 'expired') {
+            try {
+              await supabase
+                .from('invites')
+                .update({ status: 'expired' })
+                .eq('id', inviteId);
+            } catch (updateError) {
+              console.error("Error updating invite status:", updateError);
+              // Non-critical error, don't throw
+            }
+          }
           return;
         }
         
@@ -72,14 +88,13 @@ export const useInviteValidation = (inviteId: string | null) => {
         // Invite is valid
         setStatus('valid');
         
-        // Get the sender's profile data
         try {
           // Get the sender's profile data
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('*')  // Select all columns to ensure we get what's available
+            .select('display_name, avatar_url')
             .eq('id', invite.sender_id)
-            .single();
+            .maybeSingle();
           
           if (profileError) {
             console.error("Error fetching sender profile:", profileError);
@@ -91,15 +106,15 @@ export const useInviteValidation = (inviteId: string | null) => {
             return;
           }
           
-          // Now use optional chaining and defaults for safety
+          // Use optional chaining and defaults for safety
           const displayName = profileData?.display_name;
           
           setInviteData({
             sender_name: displayName || 'your partner',
             pair_id: invite.pair_id
           });
-        } catch (error) {
-          console.error("Error in profile processing:", error);
+        } catch (profileError) {
+          console.error("Error in profile processing:", profileError);
           // Fallback data
           setInviteData({
             pair_id: invite.pair_id,
@@ -111,13 +126,19 @@ export const useInviteValidation = (inviteId: string | null) => {
         console.error("Error checking invite:", error);
         setStatus('invalid');
         setError(error instanceof Error ? error : new Error("Failed to validate invitation"));
+        
+        toast({
+          title: "Error checking invitation",
+          description: error.message || "There was a problem validating this invitation",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     checkInvite();
-  }, [inviteId, retryCount]);
+  }, [inviteId, retryCount, toast]);
 
   return { loading, status, inviteData, error, refetch };
 };

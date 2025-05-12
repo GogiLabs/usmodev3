@@ -16,6 +16,7 @@ import { NetworkStatusIndicator } from "./components/common/NetworkStatusIndicat
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { lazy, Suspense } from "react";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
+import { GuestToAuthModal } from "./components/common/GuestToAuthModal";
 
 // Configure React Query with better error handling
 const queryClient = new QueryClient({
@@ -52,14 +53,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route 
-        path="/invite" 
-        element={
-          <ProtectedRoute>
-            <InvitePage />
-          </ProtectedRoute>
-        } 
-      />
+      <Route path="/invite" element={<InvitePage />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -80,6 +74,7 @@ const App = () => {
                   <RewardProvider>
                     <AppRoutes />
                     <NetworkStatusIndicator />
+                    <GuestToAuthModal />
                   </RewardProvider>
                 </TaskProvider>
               </AuthProvider>
