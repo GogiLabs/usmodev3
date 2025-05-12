@@ -52,7 +52,7 @@ export function Dashboard() {
           {isAuthenticated && isPaired && <PairedUserBanner />}
           <div className="flex items-center gap-2">
             {isAuthenticated && !isPaired && !isMobile && <InviteHandler />}
-            <PointsDisplay />
+            {/*</PointsDisplay />*/}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="shrink-0">
