@@ -7,12 +7,18 @@ import { useEffect, useState } from "react";
 import { usePair, usePairPoints } from "@/hooks/use-supabase-data";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface PointsDisplayProps {
   className?: string;
@@ -68,66 +74,104 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   }
 
   return (
-    <div className={cn(
-      "flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 px-4 py-2 rounded-full shadow-sm transition-all duration-300",
-      isAnimating && "scale-110 from-pink-200 to-purple-200",
-      className
-    )}>
-      <div className="relative">
-        <Heart className={cn(
-          "h-5 w-5 text-primary transition-transform",
-          isAnimating ? "animate-pulse scale-110" : ""
-        )} />
-        {isAnimating && (
-          <Sparkles className="h-4 w-4 text-accent absolute -top-1 -right-1 animate-pulse" />
-        )}
-      </div>
-      
-      <div className="text-sm font-medium flex items-center gap-1 relative">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1">
-                <span className={cn(
-                  "text-primary transition-all",
-                  isAnimating ? "text-lg font-bold" : ""
-                )}>
-                  {availablePoints}
-                </span>
-                
-                {isAnimating && pointDelta !== 0 && (
-                  <span className={cn(
-                    "absolute -top-5 right-0 text-sm font-bold animate-fade-in",
+    <HoverCard openDelay={300} closeDelay={100}>
+      <HoverCardTrigger>
+        <motion.div 
+          className={cn(
+            "flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 px-4 py-2 rounded-full shadow-sm transition-all duration-300",
+            isAnimating && "from-pink-200 to-purple-200",
+            className
+          )}
+          initial={{ scale: 1 }}
+          animate={isAnimating ? { scale: 1.1 } : { scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="relative">
+            <AnimatePresence>
+              {isAnimating && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1.2 }}
+                  exit={{ scale: 0 }}
+                  className="absolute -top-1 -right-1"
+                >
+                  <Sparkles className="h-4 w-4 text-accent" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <motion.div
+              animate={isAnimating ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.5 }}
+            >
+              <Heart className="h-5 w-5 text-primary" />
+            </motion.div>
+          </div>
+          
+          <div className="text-sm font-medium flex items-center gap-1 relative">
+            <AnimatePresence>
+              {isAnimating && pointDelta !== 0 && (
+                <motion.span 
+                  className={cn(
+                    "absolute -top-5 right-0 text-sm font-bold",
                     pointDelta > 0 ? "text-green-600" : "text-red-600"
-                  )}>
-                    {pointDelta > 0 ? `+${pointDelta}` : pointDelta}
-                  </span>
-                )}
-                
-                <Star className={cn(
-                  "h-3 w-3 text-primary",
-                  isAnimating && "animate-spin-slow"
-                )} 
-                fill={isAnimating ? "currentColor" : "none"} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-xs space-y-1">
-                <div className="flex items-center gap-1">
-                  <Award className="h-3 w-3 text-green-600" />
-                  <span>Earned: {earnedPoints} points</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Award className="h-3 w-3 text-red-600" />
-                  <span>Spent: {spentPoints} points</span>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
-        <span className="text-muted-foreground">points</span>
-      </div>
-    </div>
+                  )}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {pointDelta > 0 ? `+${pointDelta}` : pointDelta}
+                </motion.span>
+              )}
+            </AnimatePresence>
+              
+            <motion.span
+              className="text-primary"
+              animate={isAnimating ? { scale: [1, 1.2, 1] } : {}}
+              transition={{ duration: 0.5 }}
+            >
+              {availablePoints}
+            </motion.span>
+            
+            <Star className={cn(
+              "h-3 w-3 text-primary",
+              isAnimating && "animate-spin-slow"
+            )} 
+            fill={isAnimating ? "currentColor" : "none"} />
+            
+            <span className="text-muted-foreground">points</span>
+          </div>
+        </motion.div>
+      </HoverCardTrigger>
+      
+      <HoverCardContent className="w-64">
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold">Points Breakdown</h4>
+          
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex items-center gap-1">
+              <Award className="h-4 w-4 text-green-600" />
+              <span>Earned</span>
+            </div>
+            <span className="text-right font-medium">{earnedPoints} points</span>
+            
+            <div className="flex items-center gap-1">
+              <Award className="h-4 w-4 text-red-600" />
+              <span>Spent</span>
+            </div>
+            <span className="text-right font-medium">{spentPoints} points</span>
+            
+            <div className="col-span-2 h-px bg-border my-1"></div>
+            
+            <div className="flex items-center gap-1">
+              <Heart className="h-4 w-4 text-primary" />
+              <span>Available</span>
+            </div>
+            <span className="text-right font-medium text-primary">{availablePoints} points</span>
+          </div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   );
 }

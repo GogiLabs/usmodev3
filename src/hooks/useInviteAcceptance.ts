@@ -16,34 +16,54 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const [error, setError] = useState<Error | null>(null);
 
   const acceptInvite = async () => {
     if (!isAuthenticated || !user || !inviteId || !inviteData?.pair_id) {
+      const errorMessage = !isAuthenticated 
+        ? "You must be logged in to accept this invitation."
+        : !inviteId
+        ? "No invitation ID provided."
+        : !inviteData?.pair_id
+        ? "Invalid invitation data."
+        : "Unknown error accepting invitation.";
+        
+      setError(new Error(errorMessage));
+      
       toast({
         title: "Error",
-        description: "You must be logged in to accept this invitation.",
+        description: errorMessage,
         variant: "destructive",
       });
-      return;
+      return null;
     }
     
     try {
       setLoading(true);
+      setError(null);
       
       // Check if user is already in a pair
-      const { data: existingPair } = await supabase
+      const { data: existingPair, error: pairError } = await supabase
         .from('pairs')
         .select('id')
         .or(`user_1_id.eq.${user.id},user_2_id.eq.${user.id}`)
         .single();
       
+      if (pairError && pairError.code !== 'PGRST116') {
+        // PGRST116 means "no rows returned" which is actually what we want
+        throw pairError;
+      }
+      
       if (existingPair && existingPair.id !== inviteData.pair_id) {
+        const error = new Error("You are already paired with someone else.");
+        setError(error);
+        
         toast({
           title: "Already paired",
           description: "You are already paired with someone else.",
           variant: "destructive",
         });
-        return;
+        return null;
       }
       
       // Begin transaction to update pair and invitation status
@@ -72,18 +92,17 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         description: `You are now connected with ${inviteData.sender_name || 'your partner'}.`,
       });
       
-      // Navigate to the dashboard after a brief delay
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
-      
       return 'accepted';
       
     } catch (error: any) {
       console.error("Error accepting invite:", error);
+      const errorMessage = error.message || "An unexpected error occurred";
+      
+      setError(error instanceof Error ? error : new Error(errorMessage));
+      
       toast({
         title: "Failed to accept invitation",
-        description: error.message || "An unexpected error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
       return null;
@@ -92,5 +111,10 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
     }
   };
 
-  return { acceptInvite, loading };
+  return { 
+    acceptInvite, 
+    loading, 
+    error,
+    clearError: () => setError(null)
+  };
 };

@@ -12,6 +12,7 @@ import InvitePage from "./pages/InvitePage";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import { TaskProvider } from "./contexts/task/TaskContext";
 import { RewardProvider } from "./contexts/reward/RewardContext";
+import { NetworkStatusIndicator } from "./components/common/NetworkStatusIndicator";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ const App = () => {
               <TaskProvider>
                 <RewardProvider>
                   <AppRoutes />
+                  <NetworkStatusIndicator />
                 </RewardProvider>
               </TaskProvider>
             </AuthProvider>

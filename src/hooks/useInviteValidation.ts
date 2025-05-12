@@ -14,6 +14,15 @@ export const useInviteValidation = (inviteId: string | null) => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<InviteStatus>('checking');
   const [inviteData, setInviteData] = useState<InviteData>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Function to retry validation
+  const refetch = () => {
+    setRetryCount(prev => prev + 1);
+    setError(null);
+    setStatus('checking');
+  };
 
   useEffect(() => {
     const checkInvite = async () => {
@@ -24,6 +33,7 @@ export const useInviteValidation = (inviteId: string | null) => {
 
       try {
         setLoading(true);
+        setError(null);
         
         // Get invite details
         const { data: invite, error: inviteError } = await supabase
@@ -41,6 +51,9 @@ export const useInviteValidation = (inviteId: string | null) => {
         if (inviteError || !invite) {
           console.error("Error fetching invite:", inviteError);
           setStatus('invalid');
+          if (inviteError) {
+            setError(new Error(inviteError.message));
+          }
           return;
         }
         
@@ -80,14 +93,9 @@ export const useInviteValidation = (inviteId: string | null) => {
           
           // Now use optional chaining and defaults for safety
           const displayName = profileData?.display_name;
-          // Attempt to get email from the profile or use null
-          const email = null; // Since email doesn't exist in profiles table based on the error
-          
-          const senderName = displayName || (email ? email.split('@')[0] : 'Someone');
           
           setInviteData({
-            sender_email: email,
-            sender_name: senderName,
+            sender_name: displayName || 'your partner',
             pair_id: invite.pair_id
           });
         } catch (error) {
@@ -99,16 +107,17 @@ export const useInviteValidation = (inviteId: string | null) => {
           });
         }
         
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error checking invite:", error);
         setStatus('invalid');
+        setError(error instanceof Error ? error : new Error("Failed to validate invitation"));
       } finally {
         setLoading(false);
       }
     };
 
     checkInvite();
-  }, [inviteId]);
+  }, [inviteId, retryCount]);
 
-  return { loading, status, inviteData };
+  return { loading, status, inviteData, error, refetch };
 };
