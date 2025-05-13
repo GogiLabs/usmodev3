@@ -1,7 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -64,23 +63,21 @@ const App = () => {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
+        <div className="w-full max-w-[430px] h-screen mx-auto shadow-lg overflow-hidden bg-white">
+          <BrowserRouter>
+            <AuthProvider>
+              <TaskProvider>
+                <RewardProvider>
+                  <AppRoutes />
+                  <NetworkStatusIndicator />
+                  <GuestToAuthModal />
+                </RewardProvider>
+              </TaskProvider>
+            </AuthProvider>
+          </BrowserRouter>
           <Toaster />
           <Sonner />
-          <div className="w-full max-w-[430px] h-screen mx-auto shadow-lg overflow-hidden bg-white">
-            <BrowserRouter>
-              <AuthProvider>
-                <TaskProvider>
-                  <RewardProvider>
-                    <AppRoutes />
-                    <NetworkStatusIndicator />
-                    <GuestToAuthModal />
-                  </RewardProvider>
-                </TaskProvider>
-              </AuthProvider>
-            </BrowserRouter>
-          </div>
-        </TooltipProvider>
+        </div>
       </QueryClientProvider>
     </ErrorBoundary>
   );
