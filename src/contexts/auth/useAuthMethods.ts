@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,7 +51,11 @@ export const useAuthMethods = () => {
         email, 
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `https://www.us-mode.link/auth/callback`,
+          data: {
+            email_sender_name: "UsMode",
+            email_sender_email: "register@us-mode.link"
+          }
         }
       });
       

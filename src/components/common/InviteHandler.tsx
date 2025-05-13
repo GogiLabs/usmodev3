@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,6 +116,8 @@ export function InviteHandler({ compact = false }: InviteHandlerProps) {
           pair_id: pair.id,
           sender_id: user?.id,
           recipient_email: email,
+          sender_email: "invitation@us-mode.link",
+          site_url: "https://www.us-mode.link"
         });
 
       if (newInviteError) throw new Error(newInviteError.message);
