@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -20,11 +20,11 @@ export const useInviteValidation = (inviteId: string | null) => {
   const { toast } = useToast();
 
   // Function to retry validation
-  const refetch = () => {
+  const refetch = useCallback(() => {
     setRetryCount(prev => prev + 1);
     setError(null);
     setStatus('checking');
-  };
+  }, []);
 
   useEffect(() => {
     const checkInvite = async () => {

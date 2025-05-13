@@ -14,7 +14,8 @@ export interface AuthContextType {
   updateUserProfile: (updates: { 
     display_name?: string, 
     avatar_url?: string, 
-    theme_preference?: string 
+    theme_preference?: string,
+    bio?: string 
   }) => Promise<void>;
 }
 
@@ -22,4 +23,5 @@ export interface ProfileUpdate {
   display_name?: string;
   avatar_url?: string;
   theme_preference?: string;
+  bio?: string;
 }

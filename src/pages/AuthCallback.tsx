@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -26,7 +27,15 @@ const AuthCallback = () => {
         title: "Authentication Successful",
         description: "You are now logged in.",
       });
-      navigate('/');
+
+      // Check if there was a stored return URL (for handling invites)
+      const returnUrl = localStorage.getItem('auth_return_url');
+      if (returnUrl) {
+        localStorage.removeItem('auth_return_url');
+        navigate(returnUrl);
+      } else {
+        navigate('/');
+      }
     };
 
     handleAuthCallback();
@@ -35,7 +44,8 @@ const AuthCallback = () => {
   return (
     <div className="flex h-screen items-center justify-center">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Completing authentication...</h1>
+        <LoadingSpinner size="lg" />
+        <h1 className="text-2xl font-bold mt-4">Completing authentication...</h1>
         <p className="text-muted-foreground">Please wait while we log you in.</p>
       </div>
     </div>

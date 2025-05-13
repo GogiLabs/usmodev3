@@ -1,5 +1,7 @@
+
 import { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from 'react-router-dom';
 
@@ -32,6 +34,7 @@ export const useAuthMethods = () => {
       
       navigate('/');
     } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         title: "Login failed",
         description: error.message || "An error occurred during login.",
@@ -50,10 +53,9 @@ export const useAuthMethods = () => {
         email, 
         password,
         options: {
-          emailRedirectTo: `https://www.us-mode.link/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             email_sender_name: "UsMode",
-            email_sender_email: "register@us-mode.link"
           }
         }
       });
@@ -66,7 +68,13 @@ export const useAuthMethods = () => {
         title: "Sign up successful",
         description: "Please check your email to verify your account.",
       });
+      
+      sonnerToast.success("Account created", {
+        description: "Please check your email to verify your account"
+      });
+      
     } catch (error: any) {
+      console.error('Sign up error:', error);
       toast({
         title: "Sign up failed",
         description: error.message || "An error occurred during sign up.",
@@ -81,10 +89,18 @@ export const useAuthMethods = () => {
   const loginWithGoogle = async () => {
     try {
       setLoading(true);
+      // Store the current URL including any invite ID
+      const returnUrl = window.location.pathname + window.location.search;
+      localStorage.setItem('auth_return_url', returnUrl);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://www.us-mode.link/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
@@ -94,6 +110,7 @@ export const useAuthMethods = () => {
       
       // No toast needed here as user will be redirected to Google
     } catch (error: any) {
+      console.error('Google login error:', error);
       toast({
         title: "Google login failed",
         description: error.message || "An error occurred during Google login.",
@@ -117,7 +134,10 @@ export const useAuthMethods = () => {
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
       });
+      
+      navigate('/');
     } catch (error: any) {
+      console.error('Logout error:', error);
       toast({
         title: "Logout failed",
         description: error.message || "An error occurred during logout.",

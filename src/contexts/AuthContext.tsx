@@ -1,9 +1,11 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContextType } from './auth/types';
 import { useAuthMethods } from './auth/useAuthMethods';
 import { useProfileUpdates } from './auth/useProfileUpdates';
+import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -37,26 +39,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const interval = setInterval(updateLastActive, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, updateLastActive]);
 
   useEffect(() => {
-    // First set up the auth state listener
+    // First set up the auth state listener to avoid missing state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('Auth state changed:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
+        
+        if (event === 'SIGNED_IN') {
+          toast.success('Signed in successfully');
+        } else if (event === 'SIGNED_OUT') {
+          toast.success('Signed out successfully');
+        }
       }
     );
 
     // Then check for an existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
-    });
+    const getInitialSession = async () => {
+      try {
+        setLoading(true);
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    getInitialSession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (

@@ -1,9 +1,10 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast as sonnerToast } from 'sonner';
 
 type InviteData = {
   pair_id?: string;
@@ -18,7 +19,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
   const { user, isAuthenticated } = useAuth();
   const [error, setError] = useState<Error | null>(null);
 
-  const clearError = () => setError(null);
+  const clearError = useCallback(() => setError(null), []);
 
   const acceptInvite = async () => {
     if (!isAuthenticated || !user) {
@@ -124,6 +125,10 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       toast({
         title: "Invitation accepted!",
         description: `You are now connected with ${inviteData.sender_name || 'your partner'}.`,
+      });
+      
+      sonnerToast.success("Connection established!", {
+        description: `You are now paired with ${inviteData.sender_name || 'your partner'}.`
       });
       
       return 'accepted';
