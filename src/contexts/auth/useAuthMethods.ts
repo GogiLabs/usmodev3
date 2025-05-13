@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,6 +78,32 @@ export const useAuthMethods = () => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `https://www.us-mode.link/auth/callback`
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      // No toast needed here as user will be redirected to Google
+    } catch (error: any) {
+      toast({
+        title: "Google login failed",
+        description: error.message || "An error occurred during Google login.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       setLoading(true);
@@ -111,5 +136,5 @@ export const useAuthMethods = () => {
     });
   };
 
-  return { login, signUp, logout, showAuthRequiredToast, loading };
+  return { login, signUp, loginWithGoogle, logout, showAuthRequiredToast, loading };
 };

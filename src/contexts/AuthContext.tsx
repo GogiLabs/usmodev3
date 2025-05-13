@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +16,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login, 
     signUp, 
     logout, 
+    loginWithGoogle,
     showAuthRequiredToast, 
     loading: authMethodsLoading 
   } = useAuthMethods();
@@ -66,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       session,
       login, 
       signUp,
+      loginWithGoogle,
       logout, 
       showAuthRequiredToast,
       loading: loading || authMethodsLoading,

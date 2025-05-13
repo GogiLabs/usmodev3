@@ -7,6 +7,7 @@ export interface AuthContextType {
   user: User | null;
   login: (email?: string, password?: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   showAuthRequiredToast: () => void;
   loading: boolean;
