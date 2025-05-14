@@ -11,6 +11,8 @@ import { WifiOff } from "lucide-react";
 
 const InvitePage = () => {
   const { isOffline } = useConnectionStatus();
+  const [searchParams] = useSearchParams();
+  const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
 
   useEffect(() => {
     console.log("🔍 Invite ID from URL:", inviteId);
