@@ -36,7 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate the invite URL
     const inviteUrl = `${siteUrl}/invite?invite_id=${inviteId}`;
     const displayName = senderName || "Someone";
-    const fromEmail = senderEmail || "invitations@us-mode.link";
+    const fromEmail = "invitations@us-mode.link";
     
     // Send the email using Resend
     const { data, error } = await resend.emails.send({
