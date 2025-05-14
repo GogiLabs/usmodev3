@@ -23,8 +23,8 @@ const InvitePage = () => {
     exit: { opacity: 0, y: -20 }
   };
 
-  return (
-    <motion.div 
+return (
+    <motion.div
       className="min-h-screen flex flex-col bg-gradient-to-b from-pink-50 to-purple-50"
       variants={pageVariants}
       initial="initial"
@@ -34,28 +34,35 @@ const InvitePage = () => {
     >
       <Header />
       <div className="flex-1 flex flex-col items-center justify-center p-4">
-        {isOffline && (
-          <motion.div 
+        {isOffline ? (
+          <motion.div
             className="w-full max-w-md mb-4"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
           >
             <NetworkErrorAlert
-              message="You're currently offline. Some features may be unavailable." 
+              message="You're currently offline. Some features may be unavailable."
               onRetry={() => window.location.reload()}
               retryLabel="Refresh Page"
             />
           </motion.div>
+        ) : !inviteId ? (
+          <Alert className="max-w-md">
+            <AlertDescription>
+              This invitation link is invalid or has been revoked. Please ask your partner to send a new one.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <motion.div
+            className="w-full"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+          >
+            <InviteAcceptance />
+          </motion.div>
         )}
-        <motion.div
-          className="w-full"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-        >
-          <InviteAcceptance />
-        </motion.div>
       </div>
     </motion.div>
   );
