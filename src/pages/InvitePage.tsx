@@ -11,6 +11,10 @@ import { WifiOff } from "lucide-react";
 
 const InvitePage = () => {
   const { isOffline } = useConnectionStatus();
+
+  useEffect(() => {
+    console.log("🔍 Invite ID from URL:", inviteId);
+  }, [inviteId]);
   
   // Page transitions for smoother UX
   const pageVariants = {
