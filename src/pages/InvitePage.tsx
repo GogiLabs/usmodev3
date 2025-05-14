@@ -1,6 +1,7 @@
 
 import { Header } from "@/components/common/Header";
 import { InviteAcceptance } from "@/components/common/InviteAcceptance";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
