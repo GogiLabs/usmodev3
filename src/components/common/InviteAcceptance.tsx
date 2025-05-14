@@ -166,7 +166,7 @@ export function InviteAcceptance() {
             {validationLoading ? (
               <LoadingSpinner size="lg" text="Checking invitation status..." />
             ) : (
-              <InviteStatusDisplay status={acceptSuccess ? 'accepted' : status} senderName={inviteData?.sender_name} />
+              <InviteStatusDisplay status={acceptSuccess ? 'accepted' : status} senderName={inviteData?.sender_name} onRetry={refetchInvite} />
             )}
           </CardContent>
           
