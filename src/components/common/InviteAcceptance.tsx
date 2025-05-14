@@ -39,7 +39,14 @@ export function InviteAcceptance() {
   } = useInviteValidation(inviteId);
 
   useEffect(() => {
-    console.log("📬 useInviteValidation result:", { status, inviteData });
+    console.log("📬 useInviteValidation result:", {
+      inviteId,
+      status,
+      inviteData,
+      isDataNull: inviteData == null,
+      expiresAt: inviteData?.expires_at,
+      currentTime: new Date().toISOString()
+    });
   }, [status, inviteData]);
 
   const {
