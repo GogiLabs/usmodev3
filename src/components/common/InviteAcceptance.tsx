@@ -38,16 +38,16 @@ export function InviteAcceptance() {
     refetch: refetchInvite
   } = useInviteValidation(inviteId);
 
-  useEffect(() => {
-    console.log("📬 useInviteValidation result:", {
-      inviteId,
-      status,
-      inviteData,
-      isDataNull: inviteData == null,
-      expiresAt: inviteData?.expires_at,
-      currentTime: new Date().toISOString()
-    });
-  }, [status, inviteData]);
+useEffect(() => {
+  console.log("📬 useInviteValidation result:", {
+    inviteId,
+    status,
+    inviteData,
+    isDataNull: inviteData == null,
+    expiresAt: (inviteData as any)?.expires_at,
+    currentTime: new Date().toISOString()
+  });
+}, [status, inviteData]);
 
   const {
     acceptInvite,
