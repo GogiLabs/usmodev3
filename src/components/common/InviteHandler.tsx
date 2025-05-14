@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,7 @@ export function InviteHandler({ compact = false }: InviteHandlerProps) {
         return;
       }
 
-      // Check the rate limit by calling the function
+      // Check the rate limit using the fixed function
       const { data: withinRateLimit, error: rateLimitError } = await supabase.rpc(
         "check_invite_rate_limit", 
         { sender_id: user?.id }
@@ -116,8 +117,8 @@ export function InviteHandler({ compact = false }: InviteHandlerProps) {
           pair_id: pair.id,
           sender_id: user?.id,
           recipient_email: email,
-          sender_email: "invitation@us-mode.link",
-          site_url: "https://www.us-mode.link"
+          sender_email: user?.email || "invitation@us-mode.link",
+          site_url: window.location.origin
         });
 
       if (newInviteError) throw new Error(newInviteError.message);
