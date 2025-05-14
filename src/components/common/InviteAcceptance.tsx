@@ -1,8 +1,14 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,64 +22,62 @@ import { motion, AnimatePresence } from "framer-motion";
 export function InviteAcceptance() {
   const [searchParams] = useSearchParams();
   const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
+  console.log("🔍 InviteAcceptance: inviteId =", inviteId);
+
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [networkError, setNetworkError] = useState<Error | null>(null);
   const [acceptSuccess, setAcceptSuccess] = useState(false);
-  
-  // Use the invite validation hook with improved error handling
-  const { 
-    status, 
-    inviteData, 
-    loading: validationLoading, 
-    error: validationError, 
-    refetch: refetchInvite 
+
+  const {
+    status,
+    inviteData,
+    loading: validationLoading,
+    error: validationError,
+    refetch: refetchInvite
   } = useInviteValidation(inviteId);
-  
-  // Use the invite acceptance hook with improved error handling
-  const { 
-    acceptInvite, 
+
+  useEffect(() => {
+    console.log("📬 useInviteValidation result:", { status, inviteData });
+  }, [status, inviteData]);
+
+  const {
+    acceptInvite,
     loading: acceptLoading,
     error: acceptError,
-    clearError 
+    clearError
   } = useInviteAcceptance(inviteId, inviteData);
-  
-  // Handle errors from both hooks
+
   useEffect(() => {
     if (validationError) {
-      setNetworkError(validationError);
-    } else if (acceptError) {
-      setNetworkError(acceptError);
-    } else {
-      setNetworkError(null);
+      console.error("❌ Validation Error:", validationError);
+    }
+    if (acceptError) {
+      console.error("❌ Acceptance Error:", acceptError);
     }
   }, [validationError, acceptError]);
-  
-  // Handle automatic redirect after successful acceptance with animation
+
   useEffect(() => {
     if (acceptSuccess) {
-      // Show success toast
       sonnerToast.success("Connection established!", {
         description: "You've successfully paired with your partner.",
         duration: 5000,
       });
-      
-      // Redirect after animation completes
+
       const timer = setTimeout(() => {
-        navigate('/');
+        navigate("/");
       }, 2500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [acceptSuccess, navigate]);
-  
-  // Handle the invite acceptance with improved error handling
+
   const handleAcceptInvite = async () => {
     try {
       clearError();
       const result = await acceptInvite();
-      if (result === 'accepted') {
+      if (result === "accepted") {
         setAcceptSuccess(true);
       }
     } catch (error) {
@@ -85,9 +89,9 @@ export function InviteAcceptance() {
       });
     }
   };
-  
-  // If no invite ID is provided, show an error card
+
   if (!inviteId) {
+    console.warn("⚠️ No inviteId provided. Showing invalid card.");
     return (
       <Card className="w-full max-w-md mx-auto shadow-lg border-red-100">
         <CardHeader>
@@ -100,7 +104,7 @@ export function InviteAcceptance() {
           </p>
         </CardContent>
         <CardFooter>
-          <Button onClick={() => navigate('/')} variant="outline" className="w-full">
+          <Button onClick={() => navigate("/")} variant="outline" className="w-full">
             Return Home
           </Button>
         </CardFooter>
@@ -108,8 +112,8 @@ export function InviteAcceptance() {
     );
   }
 
-  // Show network error if any with retry option
   if (networkError && !validationLoading) {
+    console.warn("⚠️ Network error detected. Showing error card.");
     return (
       <Card className="w-full max-w-md mx-auto shadow-lg border-red-100">
         <CardHeader>
@@ -126,7 +130,7 @@ export function InviteAcceptance() {
           <Button onClick={refetchInvite} className="w-full">
             Try Again
           </Button>
-          <Button onClick={() => navigate('/')} variant="outline" className="w-full">
+          <Button onClick={() => navigate("/")} variant="outline" className="w-full">
             Return Home
           </Button>
         </CardFooter>
@@ -134,7 +138,6 @@ export function InviteAcceptance() {
     );
   }
 
-  // Improved UI for different states with better animations
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -146,7 +149,10 @@ export function InviteAcceptance() {
       >
         <Card className="w-full max-w-md mx-auto shadow-lg">
           <CardHeader>
-            <CardTitle className={`${(status === 'expired' || status === 'invalid') ? 'text-amber-500' : status === 'accepted' || acceptSuccess ? 'text-green-500' : ''}`}>
+            <CardTitle className={
+              `${(status === 'expired' || status === 'invalid') ? 'text-amber-500' :
+                status === 'accepted' || acceptSuccess ? 'text-green-500' : ''}`
+            }>
               {status === 'checking' && "Checking Invitation"}
               {status === 'valid' && "Join Your Partner"}
               {status === 'invalid' && "Invalid Invitation"}
@@ -161,7 +167,7 @@ export function InviteAcceptance() {
               {(status === 'accepted' || acceptSuccess) && "You've successfully connected with your partner!"}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="text-center">
             {validationLoading ? (
               <LoadingSpinner size="lg" text="Checking invitation status..." />
@@ -169,7 +175,7 @@ export function InviteAcceptance() {
               <InviteStatusDisplay status={acceptSuccess ? 'accepted' : status} senderName={inviteData?.sender_name} onRetry={refetchInvite} />
             )}
           </CardContent>
-          
+
           <CardFooter className="flex flex-col space-y-2">
             <AnimatePresence mode="wait">
               {status === 'valid' && (
@@ -188,8 +194,7 @@ export function InviteAcceptance() {
                       >
                         Sign in to accept
                       </Button>
-                      <p className="text-sm text-muted-foreground text-center mt-2">
-                        You'll need to sign in or create an account to accept this invitation.
+                      <p className="text-sm text-muted-foreground text-center mt-2">\                        You'll need to sign in or create an account to accept this invitation.
                       </p>
                     </>
                   ) : (
@@ -208,7 +213,7 @@ export function InviteAcceptance() {
                   )}
                 </motion.div>
               )}
-              
+
               {(status === 'invalid' || status === 'expired') && (
                 <motion.div
                   className="w-full space-y-3"
@@ -217,16 +222,15 @@ export function InviteAcceptance() {
                   exit={{ opacity: 0, height: 0 }}
                 >
                   {status === 'expired' && (
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Please ask your partner to send you a new invitation.
+                    <p className="text-sm text-muted-foreground mb-2">\                      Please ask your partner to send you a new invitation.
                     </p>
                   )}
-                  <Button onClick={() => navigate('/')} variant="outline" className="w-full">
+                  <Button onClick={() => navigate("/")} variant="outline" className="w-full">
                     Return Home
                   </Button>
                 </motion.div>
               )}
-              
+
               {(status === 'accepted' || acceptSuccess) && (
                 <motion.div
                   className="w-full"
@@ -234,8 +238,7 @@ export function InviteAcceptance() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  <p className="text-sm text-muted-foreground mb-3 text-center">
-                    Redirecting to your dashboard...
+                  <p className="text-sm text-muted-foreground mb-3 text-center">\                    Redirecting to your dashboard...
                   </p>
                 </motion.div>
               )}
