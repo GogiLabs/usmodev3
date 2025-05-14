@@ -40,8 +40,8 @@ export function Dashboard() {
       <Header />
       
       <div className="flex-1 p-4 flex flex-col space-y-4 overflow-auto pb-20">
-        {isPaired ? (
-          <PairedUserBanner pairData={pairData} />
+        {isPaired && pairData ? (
+          <PairedUserBanner />
         ) : (
           <PairPrompt className="mt-1" />
         )}
@@ -73,9 +73,9 @@ export function Dashboard() {
         
         {/* Conditional rendering based on active tab */}
         {activeTab === "tasks" ? (
-          <TaskList className="mt-2" />
+          <TaskList />
         ) : (
-          <RewardList className="mt-2" />
+          <RewardList />
         )}
       </div>
     </div>

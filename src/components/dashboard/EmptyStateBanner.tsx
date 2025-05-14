@@ -6,7 +6,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePairDetails } from "@/hooks/use-supabase-data";
 
-export function EmptyStateBanner() {
+interface EmptyStateBannerProps {
+  type?: "tasks" | "rewards";
+}
+
+export function EmptyStateBanner({ type = "tasks" }: EmptyStateBannerProps) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { data: pairDetails, isLoading } = usePairDetails();

@@ -5,6 +5,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePairStatus } from "@/hooks/use-pair-status";
 import { Reward } from "@/types/Reward";
 
+// Helper function to map database reward to app reward model
+const mapDbRewardToAppReward = (dbReward: any): Reward => {
+  return {
+    id: dbReward.id,
+    description: dbReward.description,
+    pointCost: dbReward.point_cost,
+    claimed: dbReward.claimed,
+    createdAt: new Date(dbReward.created_at),
+    claimedAt: dbReward.claimed_at ? new Date(dbReward.claimed_at) : undefined,
+    claimedBy: dbReward.claimed_by,
+  };
+};
+
 export function useRewards() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +64,8 @@ export function useRewards() {
         
         if (error) throw error;
         
-        setRewards(data as Reward[]);
+        // Transform database rewards to app rewards
+        setRewards((data || []).map(mapDbRewardToAppReward));
       } catch (err: any) {
         console.error('Error fetching rewards:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
