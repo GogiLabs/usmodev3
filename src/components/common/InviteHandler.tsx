@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { Send, AlertCircle, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,39 @@ export function InviteHandler({ compact = false }: InviteHandlerProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const sendInviteEmail = async (inviteId: string, recipientEmail: string) => {
+    try {
+      const { data: senderInfo } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', user?.id)
+        .single();
+      
+      const senderName = senderInfo?.display_name || user?.email?.split('@')[0] || 'Your partner';
+      const senderEmail = user?.email || 'invitation@us-mode.link';
+      
+      const response = await supabase.functions.invoke('send-invite-email', {
+        body: {
+          inviteId,
+          recipientEmail,
+          senderEmail,
+          senderName,
+          siteUrl: window.location.origin
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to send invitation email");
+      }
+
+      console.log("Email sending response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error sending invitation email:", error);
+      throw error;
+    }
+  };
 
   const handleInvite = async () => {
     if (!email) {
@@ -111,7 +145,7 @@ export function InviteHandler({ compact = false }: InviteHandlerProps) {
       if (newPairError) throw new Error(newPairError.message);
 
       // Send the invite
-      const { error: newInviteError } = await supabase
+      const { data: invite, error: newInviteError } = await supabase
         .from("invites")
         .insert({
           pair_id: pair.id,
@@ -119,13 +153,23 @@ export function InviteHandler({ compact = false }: InviteHandlerProps) {
           recipient_email: email,
           sender_email: user?.email || "invitation@us-mode.link",
           site_url: window.location.origin
-        });
+        })
+        .select()
+        .single();
 
       if (newInviteError) throw new Error(newInviteError.message);
 
+      // Send the actual email using our new edge function
+      await sendInviteEmail(invite.id, email);
+
+      // Show success messages
       toast({
         title: "Invite sent!",
         description: `An invitation has been sent to ${email}`,
+      });
+      
+      sonnerToast.success("Invite sent!", {
+        description: `${email} will receive an email with instructions to join.`
       });
       
       setEmail("");

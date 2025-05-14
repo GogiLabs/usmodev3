@@ -17,7 +17,9 @@ export type Database = {
           id: string
           pair_id: string | null
           recipient_email: string
+          sender_email: string | null
           sender_id: string
+          site_url: string | null
           status: string
         }
         Insert: {
@@ -27,7 +29,9 @@ export type Database = {
           id?: string
           pair_id?: string | null
           recipient_email: string
+          sender_email?: string | null
           sender_id: string
+          site_url?: string | null
           status?: string
         }
         Update: {
@@ -37,7 +41,9 @@ export type Database = {
           id?: string
           pair_id?: string | null
           recipient_email?: string
+          sender_email?: string | null
           sender_id?: string
+          site_url?: string | null
           status?: string
         }
         Relationships: [
