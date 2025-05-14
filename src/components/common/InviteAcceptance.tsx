@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export function InviteAcceptance() {
   const [searchParams] = useSearchParams();
-  const inviteId = searchParams.get("invite_id");
+  const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
