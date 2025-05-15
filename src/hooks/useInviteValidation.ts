@@ -157,7 +157,7 @@ export const useInviteValidation = (inviteId: string | null) => {
           
           console.log("👤 Sender profile data:", { profileData, profileError });
           
-          if (profileError) {
+          if (profileError || !profileData) {
             console.error("❌ Error fetching sender profile:", profileError);
             // Set default values if profile fetch fails
             setInviteData({
