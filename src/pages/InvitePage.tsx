@@ -1,7 +1,7 @@
 
 import { Header } from "@/components/common/Header";
 import { InviteAcceptance } from "@/components/common/InviteAcceptance";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
@@ -11,27 +11,53 @@ import { InviteHandler } from "@/components/common/InviteHandler";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast-wrapper";
+import { useAuth } from "@/contexts/AuthContext";
+import { LogIn } from "lucide-react";
 
 const InvitePage = () => {
   const { isOffline } = useConnectionStatus();
+  const { isAuthenticated, user } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
   const [noIdWarningVisible, setNoIdWarningVisible] = useState(false);
-  const [contextStatus, setContextStatus] = useState<'pending'|'success'|'error'>('pending');
+  const [redirectingToAuth, setRedirectingToAuth] = useState(false);
 
   useEffect(() => {
     console.log("🔍 Invite ID from URL:", inviteId);
     
-    // Try to initialize the invite context as early as possible
-    if (inviteId) {
+    if (!inviteId) {
+      // Show warning about missing invite ID after a short delay
+      const timer = setTimeout(() => {
+        setNoIdWarningVisible(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    // Store the invite ID for after authentication
+    if (inviteId && !isAuthenticated) {
+      console.log("💾 Storing pending invite ID for post-authentication flow");
+      localStorage.setItem("pending_invite_id", inviteId);
+      
+      // Short delay before redirecting to give user context
+      const timer = setTimeout(() => {
+        setRedirectingToAuth(true);
+        navigate(`/auth?invite_id=${inviteId}`);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    if (inviteId && isAuthenticated) {
+      // Only try to initialize the invite context when authenticated
       const setInviteContext = async () => {
         try {
           // Try up to 3 times with backoff
           for (let i = 0; i < 3; i++) {
             try {
               await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
-              setContextStatus('success');
-              console.log("✅ Invite context initialized early");
+              console.log("✅ Invite context initialized after authentication");
               break;
             } catch (retryError) {
               console.warn(`⚠️ Context init attempt ${i+1} failed:`, retryError);
@@ -40,7 +66,6 @@ const InvitePage = () => {
           }
         } catch (error) {
           console.error("❌ Failed to initialize invite context:", error);
-          setContextStatus('error');
           toast({
             title: "Connection issue",
             description: "There was a problem connecting to the server. Retrying...",
@@ -49,19 +74,13 @@ const InvitePage = () => {
         }
       };
       
+      // Now that we're authenticated, we can set the invite context
       setInviteContext();
-    }
-    
-    // Show warning about missing invite ID after a short delay
-    // This prevents flashing for split-second loading scenarios
-    if (!inviteId) {
-      const timer = setTimeout(() => {
-        setNoIdWarningVisible(true);
-      }, 500);
       
-      return () => clearTimeout(timer);
+      // Remove the stored invite ID as we're now handling it
+      localStorage.removeItem("pending_invite_id");
     }
-  }, [inviteId]);
+  }, [inviteId, isAuthenticated, navigate]);
   
   // Page transitions for smoother UX
   const pageVariants = {
@@ -115,6 +134,35 @@ const InvitePage = () => {
               <div className="flex justify-center">
                 <InviteHandler />
               </div>
+            </div>
+          </motion.div>
+        ) : !isAuthenticated && inviteId ? (
+          <motion.div 
+            className="w-full max-w-md"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-center mb-4">Authentication Required</h2>
+              <p className="text-muted-foreground text-center mb-6">
+                You need to sign in or create an account to view and accept this invitation.
+              </p>
+              
+              {redirectingToAuth ? (
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="w-8 h-8 border-4 border-t-primary rounded-full animate-spin"></div>
+                  <p className="text-sm text-muted-foreground">Redirecting to authentication...</p>
+                </div>
+              ) : (
+                <Button 
+                  className="w-full" 
+                  onClick={() => navigate(`/auth?invite_id=${inviteId}`)}
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Continue to Sign In
+                </Button>
+              )}
             </div>
           </motion.div>
         ) : (

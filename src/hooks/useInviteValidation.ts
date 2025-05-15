@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useSupabaseError } from "@/hooks/use-supabase-error";
+import { useAuth } from "@/contexts/AuthContext";
 
-type InviteStatus = 'checking' | 'valid' | 'invalid' | 'accepted' | 'expired';
+type InviteStatus = 'checking' | 'valid' | 'invalid' | 'accepted' | 'expired' | 'auth_required';
 
 type InviteData = {
   sender_email?: string;
@@ -22,6 +23,7 @@ export const useInviteValidation = (inviteId: string | null) => {
   const { handleError } = useSupabaseError();
   const [runOnce, setRunOnce] = useState(false);
   const [contextSetAttempts, setContextSetAttempts] = useState(0);
+  const { isAuthenticated } = useAuth();
 
   // Function to retry validation
   const refetch = useCallback(() => {
@@ -34,16 +36,24 @@ export const useInviteValidation = (inviteId: string | null) => {
   }, []);
 
   useEffect(() => {
+    // If no invite ID is provided, mark as invalid immediately
+    if (!inviteId) {
+      console.log("❌ No invite ID provided");
+      setStatus('invalid');
+      return;
+    }
+    
+    // If not authenticated, mark that authentication is required
+    if (!isAuthenticated) {
+      console.log("🔒 Authentication required to validate invite");
+      setStatus('auth_required');
+      return;
+    }
+    
     // Prevent multiple simultaneous checks
     if (loading || runOnce) return;
     
     const checkInvite = async () => {
-      if (!inviteId) {
-        console.log("❌ No invite ID provided");
-        setStatus('invalid');
-        return;
-      }
-
       try {
         console.log(`🔍 Checking invite ID: ${inviteId}`);
         setLoading(true);
@@ -90,11 +100,7 @@ export const useInviteValidation = (inviteId: string | null) => {
           .maybeSingle();
 
         console.log("🧪 Raw invite data:", invite);
-        console.log("🔐 Current Supabase role:", await supabase.auth.getSession());
-
         
-        console.log("📨 Invite query result:", { invite, inviteError });
-          
         if (inviteError) {
           console.error("❌ Error fetching invite:", inviteError);
           throw new Error(inviteError.message || "Failed to fetch invitation details");
@@ -106,6 +112,8 @@ export const useInviteValidation = (inviteId: string | null) => {
           setError(new Error("This invitation doesn't exist or has been deleted"));
           return;
         }
+        
+        console.log("📨 Invite query result:", { invite, inviteError });
         
         // Check if invite is expired
         if (invite.status === 'expired' || new Date(invite.expires_at) < new Date()) {
@@ -198,7 +206,7 @@ export const useInviteValidation = (inviteId: string | null) => {
     };
 
     checkInvite();
-  }, [inviteId, retryCount, toast, handleError, loading, runOnce]);
+  }, [inviteId, retryCount, toast, handleError, loading, runOnce, isAuthenticated]);
 
   return { 
     loading, 
@@ -206,6 +214,7 @@ export const useInviteValidation = (inviteId: string | null) => {
     inviteData, 
     error, 
     refetch,
-    contextSetAttempts 
+    contextSetAttempts,
+    requiresAuth: status === 'auth_required'
   };
 };

@@ -11,26 +11,32 @@ const Index = () => {
   const [searchParams] = useSearchParams();
   const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
   
-  // If there's an invite ID in the URL, redirect to the invite page
+  // Handle invite IDs, whether we're authenticated or not
   useEffect(() => {
     if (inviteId) {
-      console.log("🔄 Redirecting to invite page with ID:", inviteId);
+      console.log("🔄 Found invite ID in URL:", inviteId);
       
-      // Set the invite context before redirecting
-      const setContext = async () => {
-        try {
-          await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
-          console.log("✅ Set invite context before redirect");
-        } catch (error) {
-          console.error("❌ Failed to set invite context before redirect:", error);
-        }
-        // Redirect regardless of context setting success
-        navigate(`/invite?invite_id=${inviteId}`);
-      };
+      // If we're not authenticated, store the invite ID for later
+      if (!isAuthenticated) {
+        console.log("💾 Storing pending invite ID for post-authentication");
+        localStorage.setItem("pending_invite_id", inviteId);
+      }
       
-      setContext();
+      // Always redirect to the invite page
+      console.log("🔀 Redirecting to invite page");
+      navigate(`/invite?invite_id=${inviteId}`);
+    } else {
+      // Check if there's a pending invite ID from a previous visit
+      const pendingInviteId = localStorage.getItem("pending_invite_id");
+      
+      if (pendingInviteId && isAuthenticated) {
+        console.log("🔄 Found pending invite ID in storage:", pendingInviteId);
+        console.log("🔀 Redirecting to invite page with stored ID");
+        navigate(`/invite?invite_id=${pendingInviteId}`);
+        localStorage.removeItem("pending_invite_id");
+      }
     }
-  }, [inviteId, navigate]);
+  }, [inviteId, isAuthenticated, navigate]);
   
   return (
     <Dashboard />

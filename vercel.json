@@ -2,6 +2,7 @@
 {
   "routes": [
     { "handle": "filesystem" },
+    { "src": "/invite/(?<id>[^/]+)", "dest": "/invite?invite_id=$id" },
     { "src": "/(.*)", "dest": "/" }
   ]
 }
