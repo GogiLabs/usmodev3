@@ -21,6 +21,7 @@ export const useInviteValidation = (inviteId: string | null) => {
   const { toast } = useToast();
   const { handleError } = useSupabaseError();
   const [runOnce, setRunOnce] = useState(false);
+  const [contextSetAttempts, setContextSetAttempts] = useState(0);
 
   // Function to retry validation
   const refetch = useCallback(() => {
@@ -29,6 +30,7 @@ export const useInviteValidation = (inviteId: string | null) => {
     setError(null);
     setStatus('checking');
     setRunOnce(false);
+    setContextSetAttempts(0);
   }, []);
 
   useEffect(() => {
@@ -48,17 +50,31 @@ export const useInviteValidation = (inviteId: string | null) => {
         setError(null);
         setRunOnce(true);
 
-        // First, try to set the invite context
-        try {
-          // Using a type assertion to bypass the TypeScript error
-          await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
-          console.log("✅ Invite context set successfully");
-        } catch (contextError) {
-          console.error("❌ Error setting invite context:", contextError);
-          // Continue with the validation even if this fails
+        // First, try to set the invite context with retries if needed
+        let contextSuccess = false;
+        let contextAttempt = 0;
+        
+        while (!contextSuccess && contextAttempt < 3) {
+          try {
+            contextAttempt++;
+            setContextSetAttempts(prev => prev + 1);
+            
+            // Using the RPC function to bypass TypeScript error
+            await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
+            console.log("✅ Invite context set successfully");
+            contextSuccess = true;
+          } catch (contextError) {
+            console.error(`❌ Error setting invite context (attempt ${contextAttempt}/3):`, contextError);
+            if (contextAttempt >= 3) {
+              console.error("⚠️ Failed to set invite context after 3 attempts");
+            } else {
+              // Wait briefly before retry
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
         }
         
-        // Get invite details - no longer filtering by recipient_email
+        // Get invite details
         const { data: invite, error: inviteError } = await supabase
           .from('invites')
           .select(`
@@ -79,8 +95,9 @@ export const useInviteValidation = (inviteId: string | null) => {
         }
         
         if (!invite) {
-          console.error("❌ No invite found with ID:", inviteId);
+          console.log("❌ No invite found with ID:", inviteId);
           setStatus('invalid');
+          setError(new Error("This invitation doesn't exist or has been deleted"));
           return;
         }
         
@@ -175,5 +192,12 @@ export const useInviteValidation = (inviteId: string | null) => {
     checkInvite();
   }, [inviteId, retryCount, toast, handleError, loading, runOnce]);
 
-  return { loading, status, inviteData, error, refetch };
+  return { 
+    loading, 
+    status, 
+    inviteData, 
+    error, 
+    refetch,
+    contextSetAttempts 
+  };
 };

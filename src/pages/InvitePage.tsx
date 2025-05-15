@@ -9,15 +9,33 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { NetworkErrorAlert } from "@/components/common/NetworkErrorAlert";
 import { InviteHandler } from "@/components/common/InviteHandler";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 const InvitePage = () => {
   const { isOffline } = useConnectionStatus();
   const [searchParams] = useSearchParams();
   const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
   const [noIdWarningVisible, setNoIdWarningVisible] = useState(false);
+  const [contextStatus, setContextStatus] = useState<'pending'|'success'|'error'>('pending');
 
   useEffect(() => {
     console.log("🔍 Invite ID from URL:", inviteId);
+    
+    // Try to initialize the invite context as early as possible
+    if (inviteId) {
+      const setInviteContext = async () => {
+        try {
+          await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
+          setContextStatus('success');
+          console.log("✅ Invite context initialized early");
+        } catch (error) {
+          console.error("❌ Failed to initialize invite context:", error);
+          setContextStatus('error');
+        }
+      };
+      
+      setInviteContext();
+    }
     
     // Show warning about missing invite ID after a short delay
     // This prevents flashing for split-second loading scenarios

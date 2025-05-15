@@ -40,7 +40,8 @@ export function InviteAcceptance() {
     inviteData,
     loading: validationLoading,
     error: validationError,
-    refetch: refetchInvite
+    refetch: refetchInvite,
+    contextSetAttempts
   } = useInviteValidation(inviteId);
 
   // Detect if we've been stuck in "checking" status for too long
@@ -72,12 +73,13 @@ export function InviteAcceptance() {
       currentTime: new Date().toISOString(),
       user: user ? { id: user.id, email: user.email } : null,
       isAuthenticated,
-      validationAttempts
+      validationAttempts,
+      contextSetAttempts
     };
     
     console.log("📬 useInviteValidation result:", debugData);
     setDebugInfo(debugData);
-  }, [status, inviteData, inviteId, user, isAuthenticated, validationAttempts]);
+  }, [status, inviteData, inviteId, user, isAuthenticated, validationAttempts, contextSetAttempts]);
 
   const {
     acceptInvite,
@@ -127,7 +129,7 @@ export function InviteAcceptance() {
     }
   };
 
-  // Handle cases where validation is stuck in loading state
+  // Improve error handling for cases where validation is stuck
   useEffect(() => {
     if (validationAttempts >= 3 && status === 'checking') {
       console.log("⚠️ Forcing invitation status update due to timeout");
@@ -215,6 +217,53 @@ export function InviteAcceptance() {
             className="w-full"
             variant="default"
           >
+            <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+          </Button>
+          <Button onClick={() => navigate("/")} variant="outline" className="w-full">
+            Return Home
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  if (status === 'invalid' && validationError) {
+    const errorMessage = validationError?.message || "This invitation doesn't exist or has been revoked.";
+    
+    return (
+      <Card className="w-full max-w-md mx-auto shadow-lg border-red-100">
+        <CardHeader>
+          <CardTitle className="text-red-500">Invalid Invitation</CardTitle>
+          <CardDescription>{errorMessage}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-left">
+            <div className="flex items-start">
+              <AlertCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">Possible reasons:</p>
+                <ul className="text-xs text-amber-700 mt-1 list-disc pl-5">
+                  <li>The invitation link may have been copied incorrectly</li>
+                  <li>The invitation may have been deleted by the sender</li>
+                  <li>The invitation ID may be invalid</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          {import.meta.env.DEV && debugInfo && (
+            <div className="mt-4 p-2 bg-gray-100 rounded text-left">
+              <details className="text-xs">
+                <summary className="font-medium cursor-pointer">Debug Info</summary>
+                <pre className="mt-2 overflow-auto max-h-40 text-gray-700">
+                  {JSON.stringify(debugInfo, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <Button onClick={refetchInvite} variant="default" className="w-full">
             <RefreshCw className="mr-2 h-4 w-4" /> Try Again
           </Button>
           <Button onClick={() => navigate("/")} variant="outline" className="w-full">
