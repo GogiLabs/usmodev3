@@ -294,6 +294,10 @@ export type Database = {
         Args: { sender_id: string }
         Returns: boolean
       }
+      custom_access_token_hook: {
+        Args: { user_id: string }
+        Returns: Json
+      }
       get_pair_points: {
         Args: { pair_id: string }
         Returns: {

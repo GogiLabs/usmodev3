@@ -37,7 +37,7 @@ export const useInviteValidation = (inviteId: string | null) => {
         setLoading(true);
         setError(null);
         
-        // Get invite details
+        // Get invite details - no longer filtering by recipient_email
         const { data: invite, error: inviteError } = await supabase
           .from('invites')
           .select(`
