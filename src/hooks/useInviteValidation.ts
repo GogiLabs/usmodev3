@@ -88,6 +88,10 @@ export const useInviteValidation = (inviteId: string | null) => {
           `)
           .eq('id', inviteId)
           .maybeSingle();
+
+        console.log("🧪 Raw invite data:", invite);
+        console.log("🔐 Current Supabase role:", await supabase.auth.getSession());
+
         
         console.log("📨 Invite query result:", { invite, inviteError });
           
