@@ -10,6 +10,7 @@ import { NetworkErrorAlert } from "@/components/common/NetworkErrorAlert";
 import { InviteHandler } from "@/components/common/InviteHandler";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast-wrapper";
 
 const InvitePage = () => {
   const { isOffline } = useConnectionStatus();
@@ -25,12 +26,26 @@ const InvitePage = () => {
     if (inviteId) {
       const setInviteContext = async () => {
         try {
-          await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
-          setContextStatus('success');
-          console.log("✅ Invite context initialized early");
+          // Try up to 3 times with backoff
+          for (let i = 0; i < 3; i++) {
+            try {
+              await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
+              setContextStatus('success');
+              console.log("✅ Invite context initialized early");
+              break;
+            } catch (retryError) {
+              console.warn(`⚠️ Context init attempt ${i+1} failed:`, retryError);
+              await new Promise(r => setTimeout(r, 200 * (i + 1)));
+            }
+          }
         } catch (error) {
           console.error("❌ Failed to initialize invite context:", error);
           setContextStatus('error');
+          toast({
+            title: "Connection issue",
+            description: "There was a problem connecting to the server. Retrying...",
+            variant: "destructive"
+          });
         }
       };
       

@@ -74,7 +74,7 @@ export const useInviteValidation = (inviteId: string | null) => {
           }
         }
         
-        // Get invite details
+        // Get invite details - Using direct fetch with no RLS restrictions
         const { data: invite, error: inviteError } = await supabase
           .from('invites')
           .select(`
@@ -82,7 +82,8 @@ export const useInviteValidation = (inviteId: string | null) => {
             status, 
             pair_id, 
             expires_at, 
-            sender_id
+            sender_id,
+            recipient_email
           `)
           .eq('id', inviteId)
           .maybeSingle();
@@ -158,12 +159,14 @@ export const useInviteValidation = (inviteId: string | null) => {
           
           setInviteData({
             sender_name: displayName || 'your partner',
-            pair_id: invite.pair_id
+            pair_id: invite.pair_id,
+            sender_email: invite.recipient_email
           });
           
           console.log("📝 Set invite data:", { 
             sender_name: displayName || 'your partner', 
-            pair_id: invite.pair_id 
+            pair_id: invite.pair_id,
+            sender_email: invite.recipient_email
           });
         } catch (profileError) {
           console.error("❌ Error in profile processing:", profileError);
