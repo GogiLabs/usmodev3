@@ -36,7 +36,8 @@ export const useInviteValidation = (inviteId: string | null) => {
       try {
         setLoading(true);
         setError(null);
-        
+
+        await supabase.rpc('set_invite_context', { invite_id: inviteId });
         // Get invite details - no longer filtering by recipient_email
         const { data: invite, error: inviteError } = await supabase
           .from('invites')
