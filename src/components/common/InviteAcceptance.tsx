@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,19 +18,22 @@ import { useInviteAcceptance } from "@/hooks/useInviteAcceptance";
 import { NetworkErrorAlert } from "@/components/common/NetworkErrorAlert";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 export function InviteAcceptance() {
   const [searchParams] = useSearchParams();
   const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
-  console.log("🔍 InviteAcceptance: inviteId =", inviteId);
-
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [networkError, setNetworkError] = useState<Error | null>(null);
   const [acceptSuccess, setAcceptSuccess] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [validationAttempts, setValidationAttempts] = useState(0);
+
+  useEffect(() => {
+    console.log("🔍 InviteAcceptance: inviteId =", inviteId);
+  }, [inviteId]);
 
   const {
     status,
@@ -41,6 +43,26 @@ export function InviteAcceptance() {
     refetch: refetchInvite
   } = useInviteValidation(inviteId);
 
+  // Detect if we've been stuck in "checking" status for too long
+  useEffect(() => {
+    if (status === 'checking' && validationLoading) {
+      const timer = setTimeout(() => {
+        setValidationAttempts(prev => {
+          // If we've already tried 3 times, force an invalid state
+          if (prev >= 2) {
+            console.log("⚠️ Invite validation timed out after multiple attempts");
+            return prev;
+          }
+          // Otherwise, try refetching
+          refetchInvite();
+          return prev + 1;
+        });
+      }, 5000); // Wait 5 seconds before considering it stuck
+      
+      return () => clearTimeout(timer);
+    }
+  }, [status, validationLoading, refetchInvite]);
+
   useEffect(() => {
     const debugData = {
       inviteId,
@@ -49,12 +71,13 @@ export function InviteAcceptance() {
       isDataNull: inviteData == null,
       currentTime: new Date().toISOString(),
       user: user ? { id: user.id, email: user.email } : null,
-      isAuthenticated
+      isAuthenticated,
+      validationAttempts
     };
     
     console.log("📬 useInviteValidation result:", debugData);
     setDebugInfo(debugData);
-  }, [status, inviteData, inviteId, user, isAuthenticated]);
+  }, [status, inviteData, inviteId, user, isAuthenticated, validationAttempts]);
 
   const {
     acceptInvite,
@@ -104,8 +127,15 @@ export function InviteAcceptance() {
     }
   };
 
+  // Handle cases where validation is stuck in loading state
+  useEffect(() => {
+    if (validationAttempts >= 3 && status === 'checking') {
+      console.log("⚠️ Forcing invitation status update due to timeout");
+      setNetworkError(new Error("Invitation validation timed out. Please try again."));
+    }
+  }, [validationAttempts, status]);
+
   if (!inviteId) {
-    console.warn("⚠️ No inviteId provided. Showing invalid card.");
     return (
       <Card className="w-full max-w-md mx-auto shadow-lg border-red-100">
         <CardHeader>
@@ -127,7 +157,6 @@ export function InviteAcceptance() {
   }
 
   if (networkError && !validationLoading) {
-    console.warn("⚠️ Network error detected. Showing error card.");
     return (
       <Card className="w-full max-w-md mx-auto shadow-lg border-red-100">
         <CardHeader>
@@ -143,6 +172,50 @@ export function InviteAcceptance() {
         <CardFooter className="flex flex-col space-y-2">
           <Button onClick={refetchInvite} className="w-full">
             Try Again
+          </Button>
+          <Button onClick={() => navigate("/")} variant="outline" className="w-full">
+            Return Home
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  // If validation attempts exceed threshold and we're still checking, show timeout UI
+  if (validationAttempts >= 3 && status === 'checking') {
+    return (
+      <Card className="w-full max-w-md mx-auto shadow-lg border-amber-100">
+        <CardHeader>
+          <CardTitle className="text-amber-500">Invitation Check Timed Out</CardTitle>
+          <CardDescription>We're having trouble verifying this invitation.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 bg-amber-50 rounded-md flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-amber-800">We couldn't verify this invitation after multiple attempts.</p>
+              <p className="text-sm text-amber-700 mt-2">The invitation may have been deleted or expired, or there may be a connection issue.</p>
+            </div>
+          </div>
+          
+          {import.meta.env.DEV && (
+            <div className="mt-4 p-3 bg-gray-100 rounded-md">
+              <details>
+                <summary className="text-sm font-medium cursor-pointer">Debug Information</summary>
+                <pre className="mt-2 text-xs overflow-auto max-h-40">
+                  {JSON.stringify({ inviteId, attempts: validationAttempts, error: validationError?.message }, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <Button 
+            onClick={refetchInvite} 
+            className="w-full"
+            variant="default"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" /> Try Again
           </Button>
           <Button onClick={() => navigate("/")} variant="outline" className="w-full">
             Return Home

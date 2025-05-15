@@ -20,6 +20,7 @@ export const useInviteValidation = (inviteId: string | null) => {
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
   const { handleError } = useSupabaseError();
+  const [runOnce, setRunOnce] = useState(false);
 
   // Function to retry validation
   const refetch = useCallback(() => {
@@ -27,9 +28,13 @@ export const useInviteValidation = (inviteId: string | null) => {
     setRetryCount(prev => prev + 1);
     setError(null);
     setStatus('checking');
+    setRunOnce(false);
   }, []);
 
   useEffect(() => {
+    // Prevent multiple simultaneous checks
+    if (loading || runOnce) return;
+    
     const checkInvite = async () => {
       if (!inviteId) {
         console.log("❌ No invite ID provided");
@@ -41,6 +46,7 @@ export const useInviteValidation = (inviteId: string | null) => {
         console.log(`🔍 Checking invite ID: ${inviteId}`);
         setLoading(true);
         setError(null);
+        setRunOnce(true);
 
         // First, try to set the invite context
         try {
@@ -167,7 +173,7 @@ export const useInviteValidation = (inviteId: string | null) => {
     };
 
     checkInvite();
-  }, [inviteId, retryCount, toast, handleError]);
+  }, [inviteId, retryCount, toast, handleError, loading, runOnce]);
 
   return { loading, status, inviteData, error, refetch };
 };
