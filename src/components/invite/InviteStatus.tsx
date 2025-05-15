@@ -1,131 +1,93 @@
 
-import { CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
-import { motion } from "framer-motion";
+import React from "react";
+import { CheckCircle, XCircle, Clock, AlertCircle, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type StatusDisplayProps = {
-  status: 'checking' | 'valid' | 'invalid' | 'accepted' | 'expired';
+type InviteStatusProps = {
+  status: "checking" | "valid" | "invalid" | "accepted" | "expired" | "auth_required";
   senderName?: string;
   onRetry?: () => void;
 };
 
-export function InviteStatusDisplay({ status, senderName, onRetry }: StatusDisplayProps) {
-  if (status === 'checking') {
-    return (
-      <div className="flex flex-col items-center space-y-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        >
-          <Loader2 className="h-16 w-16 text-purple-500" />
-        </motion.div>
-        <p>Checking invitation status...</p>
-      </div>
-    );
-  }
-  
-  if (status === 'valid') {
-    return (
-      <motion.div 
-        className="flex flex-col items-center space-y-4"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <motion.div
-          animate={{ 
-            y: [0, -5, 0],
-            scale: [1, 1.05, 1]
-          }}
-          transition={{ 
-            duration: 2, 
-            repeat: Infinity, 
-            repeatType: "reverse" 
-          }}
-        >
-          <CheckCircle className="h-16 w-16 text-green-500" />
-        </motion.div>
-        <p className="text-center">
-          <span className="font-semibold">{senderName || 'Someone'}</span> has invited you 
-          to connect and start using UsMode together!
-        </p>
-      </motion.div>
-    );
-  }
-  
-  if (status === 'invalid') {
-    return (
-      <motion.div 
-        className="flex flex-col items-center space-y-4"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <XCircle className="h-16 w-16 text-red-500" />
-        <p className="text-center">The invitation link you followed is not valid or has been revoked.</p>
-        <p className="text-sm text-muted-foreground">Please ask for a new invitation if you think this is a mistake.</p>
-        
-        {onRetry && (
-          <Button variant="outline" size="sm" onClick={onRetry} className="mt-2">
-            <RefreshCw className="mr-2 h-4 w-4" /> Try Again
-          </Button>
-        )}
-      </motion.div>
-    );
-  }
-  
-  if (status === 'expired') {
-    return (
-      <motion.div 
-        className="flex flex-col items-center space-y-4"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <AlertCircle className="h-16 w-16 text-amber-500" />
-        <p className="text-center">This invitation has expired.</p>
-        <p className="text-sm text-muted-foreground">Invitations are valid for 7 days. Please ask for a new invitation.</p>
-      </motion.div>
-    );
-  }
-  
-  if (status === 'accepted') {
-    return (
-      <motion.div 
-        className="flex flex-col items-center space-y-4"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ 
-          opacity: 1, 
-          scale: 1, 
-          y: [0, -10, 0],
-          transition: {
-            y: { 
-              times: [0, 0.5, 1],
-              repeat: 1,
-              duration: 1 
-            },
-            default: { duration: 0.8 }
-          }
-        }}
-      >
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 10, -10, 0]
-          }}
-          transition={{ 
-            duration: 1.5, 
-            repeat: 1, 
-            repeatType: "reverse" 
-          }}
-        >
-          <CheckCircle className="h-16 w-16 text-green-500" />
-        </motion.div>
-        <p className="text-center">Connection successful!</p>
-        <p className="text-sm text-muted-foreground animate-pulse">Redirecting to your dashboard...</p>
-      </motion.div>
-    );
-  }
-  
-  return null;
+export function InviteStatusDisplay({
+  status,
+  senderName,
+  onRetry
+}: InviteStatusProps) {
+  return (
+    <div className="flex flex-col items-center p-4">
+      {status === "checking" && (
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-blue-500 border-b-gray-200 border-l-gray-200 border-r-gray-200 mx-auto mb-4"></div>
+          <p className="text-gray-500">Checking invitation status...</p>
+        </div>
+      )}
+
+      {status === "valid" && (
+        <div className="text-center">
+          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <p className="text-lg font-medium">Valid Invitation</p>
+          {senderName && (
+            <p className="text-gray-600 mt-2">
+              {senderName} has invited you to collaborate
+            </p>
+          )}
+        </div>
+      )}
+
+      {status === "auth_required" && (
+        <div className="text-center">
+          <LockKeyhole className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+          <p className="text-lg font-medium">Authentication Required</p>
+          <p className="text-gray-600 mt-2">
+            You need to sign in first to view this invitation
+          </p>
+        </div>
+      )}
+
+      {status === "invalid" && (
+        <div className="text-center">
+          <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-lg font-medium">Invalid Invitation</p>
+          <p className="text-gray-600 mt-2">
+            This invitation link is invalid or has been revoked
+          </p>
+          {onRetry && (
+            <Button onClick={onRetry} variant="outline" size="sm" className="mt-4">
+              Try Again
+            </Button>
+          )}
+        </div>
+      )}
+
+      {status === "expired" && (
+        <div className="text-center">
+          <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+          <p className="text-lg font-medium">Expired Invitation</p>
+          <p className="text-gray-600 mt-2">
+            This invitation has expired. Please ask for a new one.
+          </p>
+          {onRetry && (
+            <Button onClick={onRetry} variant="outline" size="sm" className="mt-4">
+              Check Again
+            </Button>
+          )}
+        </div>
+      )}
+
+      {status === "accepted" && (
+        <div className="text-center">
+          <div className="rounded-full bg-green-100 p-3 mb-4 mx-auto inline-block">
+            <CheckCircle className="h-8 w-8 text-green-500" />
+          </div>
+          <p className="text-green-600 font-medium text-lg">
+            You've successfully connected with {senderName || "your partner"}!
+          </p>
+          <div className="mt-4 text-sm text-gray-500">
+            <p>Your synchronization is complete.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

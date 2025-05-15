@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -293,6 +294,7 @@ export function InviteAcceptance() {
               {status === 'valid' && "Join Your Partner"}
               {status === 'invalid' && "Invalid Invitation"}
               {status === 'expired' && "Expired Invitation"}
+              {status === 'auth_required' && "Authentication Required"}
               {status === 'accepted' || acceptSuccess ? "Invitation Accepted" : ""}
             </CardTitle>
             <CardDescription>
@@ -300,6 +302,7 @@ export function InviteAcceptance() {
               {status === 'valid' && inviteData?.sender_name && `${inviteData.sender_name} has invited you to collaborate`}
               {status === 'invalid' && "This invitation link is invalid or cannot be found"}
               {status === 'expired' && "This invitation has expired"}
+              {status === 'auth_required' && "You need to sign in to view this invitation"}
               {(status === 'accepted' || acceptSuccess) && "You've successfully connected with your partner!"}
             </CardDescription>
           </CardHeader>
@@ -371,6 +374,26 @@ export function InviteAcceptance() {
                       ) : "Accept Invitation"}
                     </Button>
                   )}
+                </motion.div>
+              )}
+
+              {status === 'auth_required' && (
+                <motion.div
+                  className="w-full"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <Button 
+                    onClick={() => navigate(`/auth?invite_id=${inviteId}`)} 
+                    className="w-full"
+                    variant="default"
+                  >
+                    Sign in to continue
+                  </Button>
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    Authentication is required to view this invitation.
+                  </p>
                 </motion.div>
               )}
 
