@@ -75,6 +75,7 @@ export const useInviteValidation = (inviteId: string | null) => {
         }
         
         // Get invite details - Using direct fetch with no RLS restrictions
+        console.log("🔍 Fetching invite for ID:", inviteId);
         const { data: invite, error: inviteError } = await supabase
           .from('invites')
           .select(`
