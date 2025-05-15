@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { useInviteAcceptance } from "@/hooks/useInviteAcceptance";
 import { NetworkErrorAlert } from "@/components/common/NetworkErrorAlert";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle } from "lucide-react";
 
 export function InviteAcceptance() {
   const [searchParams] = useSearchParams();
@@ -29,6 +31,7 @@ export function InviteAcceptance() {
   const { toast } = useToast();
   const [networkError, setNetworkError] = useState<Error | null>(null);
   const [acceptSuccess, setAcceptSuccess] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const {
     status,
@@ -38,16 +41,20 @@ export function InviteAcceptance() {
     refetch: refetchInvite
   } = useInviteValidation(inviteId);
 
-useEffect(() => {
-  console.log("📬 useInviteValidation result:", {
-    inviteId,
-    status,
-    inviteData,
-    isDataNull: inviteData == null,
-    expiresAt: (inviteData as any)?.expires_at,
-    currentTime: new Date().toISOString()
-  });
-}, [status, inviteData]);
+  useEffect(() => {
+    const debugData = {
+      inviteId,
+      status,
+      inviteData,
+      isDataNull: inviteData == null,
+      currentTime: new Date().toISOString(),
+      user: user ? { id: user.id, email: user.email } : null,
+      isAuthenticated
+    };
+    
+    console.log("📬 useInviteValidation result:", debugData);
+    setDebugInfo(debugData);
+  }, [status, inviteData, inviteId, user, isAuthenticated]);
 
   const {
     acceptInvite,
@@ -181,6 +188,29 @@ useEffect(() => {
             ) : (
               <InviteStatusDisplay status={acceptSuccess ? 'accepted' : status} senderName={inviteData?.sender_name} onRetry={refetchInvite} />
             )}
+            
+            {status === 'invalid' && validationError && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-left">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Invitation Error Details</p>
+                    <p className="text-xs text-amber-700 mt-1">{validationError.message}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {import.meta.env.DEV && debugInfo && (
+              <div className="mt-4 p-2 bg-gray-100 rounded text-left">
+                <details className="text-xs">
+                  <summary className="font-medium cursor-pointer">Debug Info</summary>
+                  <pre className="mt-2 overflow-auto max-h-40 text-gray-700">
+                    {JSON.stringify(debugInfo, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )}
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-2">
@@ -201,7 +231,8 @@ useEffect(() => {
                       >
                         Sign in to accept
                       </Button>
-                      <p className="text-sm text-muted-foreground text-center mt-2">\                        You'll need to sign in or create an account to accept this invitation.
+                      <p className="text-sm text-muted-foreground text-center mt-2">
+                        You'll need to sign in or create an account to accept this invitation.
                       </p>
                     </>
                   ) : (
@@ -229,11 +260,15 @@ useEffect(() => {
                   exit={{ opacity: 0, height: 0 }}
                 >
                   {status === 'expired' && (
-                    <p className="text-sm text-muted-foreground mb-2">\                      Please ask your partner to send you a new invitation.
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Please ask your partner to send you a new invitation.
                     </p>
                   )}
                   <Button onClick={() => navigate("/")} variant="outline" className="w-full">
                     Return Home
+                  </Button>
+                  <Button onClick={refetchInvite} variant="ghost" size="sm" className="w-full">
+                    Try Again
                   </Button>
                 </motion.div>
               )}
@@ -245,7 +280,8 @@ useEffect(() => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  <p className="text-sm text-muted-foreground mb-3 text-center">\                    Redirecting to your dashboard...
+                  <p className="text-sm text-muted-foreground mb-3 text-center">
+                    Redirecting to your dashboard...
                   </p>
                 </motion.div>
               )}
