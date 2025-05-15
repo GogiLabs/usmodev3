@@ -23,7 +23,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
 
   const acceptInvite = async () => {
     if (!isAuthenticated || !user) {
-      const errorMessage = "You must be logged in to accept this invitation.";
+      const errorMessage = "You must  be logged in to accept this invitation.";
       setError(new Error(errorMessage));
       
       toast({
