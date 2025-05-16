@@ -1,10 +1,7 @@
 
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast as sonnerToast } from 'sonner';
+import { useInviteAcceptanceState } from "./useInviteAcceptanceState";
+import { validateInviteStatus, checkForExistingPair, useAuthValidation } from "./useInviteValidations";
+import { updatePair, markInviteAsAccepted } from "./useInvitePairUpdates";
 
 type InviteData = {
   pair_id?: string;
@@ -13,50 +10,30 @@ type InviteData = {
 } | null;
 
 export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteData) => {
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
-  const [error, setError] = useState<Error | null>(null);
-
-  const clearError = useCallback(() => setError(null), []);
+  const { 
+    loading, 
+    setLoading, 
+    error, 
+    clearError, 
+    handleSuccess, 
+    handleError,
+    toast 
+  } = useInviteAcceptanceState();
+  
+  const { validateAuth } = useAuthValidation();
 
   const acceptInvite = async () => {
-    console.log("🔍 acceptInvite called with:", { inviteId, inviteData, user, isAuthenticated });
-    
-    if (!isAuthenticated || !user) {
-      const errorMessage = "You must be logged in to accept this invitation.";
-      setError(new Error(errorMessage));
-      
-      toast({
-        title: "Authentication Required",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      return null;
-    }
+    console.log("🔍 acceptInvite called with:", { inviteId, inviteData });
     
     if (!inviteId) {
       const errorMessage = "No invitation ID provided.";
-      setError(new Error(errorMessage));
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      handleError(new Error(errorMessage));
       return null;
     }
     
     if (!inviteData?.pair_id) {
       const errorMessage = "Invalid invitation data.";
-      setError(new Error(errorMessage));
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      handleError(new Error(errorMessage));
       return null;
     }
     
@@ -64,108 +41,38 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       setLoading(true);
       clearError();
       
-      // Check invitation status once more before accepting
-      console.log("🔍 Checking invitation status before accepting:", { inviteId });
-      const { data: invite, error: checkError } = await supabase
-        .from('invites')
-        .select('status, expires_at')
-        .eq('id', inviteId)
-        .maybeSingle();
-      
-      console.log("📋 Invite verification result:", { invite, checkError });
-      
-      if (checkError) {
-        throw new Error(checkError.message || "Failed to verify invitation status");
+      // Validate authentication
+      try {
+        const { user } = validateAuth();
+        
+        // Validate invitation status
+        await validateInviteStatus(inviteId);
+        
+        // Check if user is already in a pair
+        await checkForExistingPair(user.id, inviteData.pair_id);
+        
+        // Update pair with the user
+        await updatePair(inviteData.pair_id, user.id);
+        
+        // Mark invitation as accepted
+        await markInviteAsAccepted(inviteId);
+        
+        // Handle success and navigation
+        handleSuccess(inviteData.sender_name);
+        
+        return 'accepted';
+        
+      } catch (authError: any) {
+        toast({
+          title: "Authentication Required",
+          description: authError.message,
+          variant: "destructive",
+        });
+        throw authError;
       }
-      
-      if (!invite) {
-        throw new Error("Invitation not found");
-      }
-      
-      if (invite.status === 'expired' || new Date(invite.expires_at) < new Date()) {
-        throw new Error("This invitation has expired");
-      }
-      
-      if (invite.status === 'accepted') {
-        throw new Error("This invitation has already been accepted");
-      }
-      
-      // Check if user is already in a pair
-      console.log("🔍 Checking if user is already in a pair:", { userId: user.id });
-      const { data: existingPair, error: pairError } = await supabase
-        .from('pairs')
-        .select('id')
-        .or(`user_1_id.eq.${user.id},user_2_id.eq.${user.id}`)
-        .maybeSingle();
-      
-      console.log("👥 Existing pair check result:", { existingPair, pairError });
-      
-      if (pairError && pairError.code !== 'PGRST116') {
-        // PGRST116 means "no rows returned" which is actually what we want
-        throw new Error(pairError.message || "Failed to check existing pairs");
-      }
-      
-      if (existingPair && existingPair.id !== inviteData.pair_id) {
-        throw new Error("You are already paired with someone else.");
-      }
-      
-      // Begin transaction to update pair and invitation status
-      console.log("🔄 Updating pair with user:", { pairId: inviteData.pair_id, userId: user.id });
-      const { error: updateError } = await supabase
-        .from('pairs')
-        .update({ user_2_id: user.id })
-        .eq('id', inviteData.pair_id);
-      
-      console.log("✏️ Pair update result:", { updateError });
-      
-      if (updateError) {
-        throw new Error(updateError.message || "Failed to update pair");
-      }
-      
-      // Mark invitation as accepted
-      console.log("🔄 Marking invitation as accepted:", { inviteId });
-      const { error: inviteError } = await supabase
-        .from('invites')
-        .update({ status: 'accepted' })
-        .eq('id', inviteId);
-      
-      console.log("✏️ Invite update result:", { inviteError });
-      
-      if (inviteError) {
-        throw new Error(inviteError.message || "Failed to update invitation status");
-      }
-      
-      // Clear any potential pending invite ID from storage
-      localStorage.removeItem('pending_invite_id');
-      
-      // Success!
-      toast({
-        title: "Invitation accepted!",
-        description: `You are now connected with ${inviteData.sender_name || 'your partner'}.`,
-      });
-      
-      sonnerToast.success("Connection established!", {
-        description: `You are now paired with ${inviteData.sender_name || 'your partner'}.`
-      });
-      
-      // Add a slight delay before redirecting to allow the user to read the success message
-      setTimeout(() => {
-        navigate('/');
-      }, 800);
-      
-      return 'accepted';
       
     } catch (error: any) {
-      console.error("❌ Error accepting invite:", error);
-      const errorMessage = error.message || "An unexpected error occurred";
-      
-      setError(error instanceof Error ? error : new Error(errorMessage));
-      
-      toast({
-        title: "Failed to accept invitation",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      handleError(error);
       return null;
     } finally {
       setLoading(false);
