@@ -18,17 +18,30 @@ export function useFetchInviteData(inviteId: string | null, isAuthenticated: boo
   const { setInviteContext } = useInviteContext();
   
   const fetchInviteData = async () => {
-    if (!inviteId || !isAuthenticated) return;
+    if (!inviteId) {
+      console.log("⚠️ Cannot fetch invite data: No invite ID");
+      return;
+    }
+    
+    if (!isAuthenticated) {
+      console.log("⚠️ Cannot fetch invite data: Not authenticated");
+      setStatus('auth_required');
+      return;
+    }
     
     try {
+      console.log("🔄 Starting invite data fetch for ID:", inviteId);
       setLoading(true);
       setError(null);
       
       // Set invite context first
+      console.log("🔗 Setting invite context...");
       const contextSet = await setInviteContext(inviteId);
       if (!contextSet) {
+        console.log("❌ Failed to set invite context");
         throw new Error("Unable to access invitation details");
       }
+      console.log("✅ Successfully set invite context");
       
       // Now fetch the invitation data
       console.log("🔍 Fetching invite for ID:", inviteId);
@@ -48,6 +61,7 @@ export function useFetchInviteData(inviteId: string | null, isAuthenticated: boo
       console.log("🧪 Raw invite data:", invite);
       
       if (inviteError) {
+        console.log("❌ Error fetching invite:", inviteError);
         throw new Error(inviteError.message || "Failed to fetch invitation details");
       }
       
@@ -111,6 +125,7 @@ export function useFetchInviteData(inviteId: string | null, isAuthenticated: boo
       setStatus('invalid');
       setError(error instanceof Error ? error : new Error(error.message || "Failed to validate invitation"));
     } finally {
+      console.log("🏁 Completed invite fetch with status:", status);
       setLoading(false);
     }
   };

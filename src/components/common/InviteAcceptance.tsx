@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -34,6 +35,11 @@ export function InviteAcceptance() {
     contextSetAttempts
   } = useInviteValidation(inviteId);
 
+  // Log validation result
+  useEffect(() => {
+    console.log("🔍 Validation update:", { status, inviteData, validationLoading, error: validationError?.message });
+  }, [status, inviteData, validationLoading, validationError]);
+
   // Get invite acceptance logic from hook
   const {
     acceptInvite,
@@ -45,16 +51,20 @@ export function InviteAcceptance() {
   // Detect if we've been stuck in "checking" status for too long
   useEffect(() => {
     if (status === 'checking' && validationLoading) {
+      console.log("⏱️ Checking if we're stuck in validation...");
       const timer = setTimeout(() => {
         setValidationAttempts(prev => {
+          const newCount = prev + 1;
+          console.log(`⚠️ Validation taking too long, attempt ${newCount}`);
           // If we've already tried 3 times, force an invalid state
-          if (prev >= 2) {
-            console.log("⚠️ Invite validation timed out after multiple attempts");
-            return prev;
+          if (newCount >= 3) {
+            console.log("⛔ Invite validation timed out after multiple attempts");
+            setNetworkError(new Error("Invitation validation timed out. Please try again."));
+            return newCount;
           }
           // Otherwise, try refetching
           refetchInvite();
-          return prev + 1;
+          return newCount;
         });
       }, 5000); // Wait 5 seconds before considering it stuck
       
@@ -73,12 +83,13 @@ export function InviteAcceptance() {
       user: user ? { id: user.id, email: user.email } : null,
       isAuthenticated,
       validationAttempts,
-      contextSetAttempts
+      contextSetAttempts,
+      isLoading: validationLoading
     };
     
-    console.log("📬 useInviteValidation result:", debugData);
+    console.log("📬 InviteAcceptance state:", debugData);
     setDebugInfo(debugData);
-  }, [status, inviteData, inviteId, user, isAuthenticated, validationAttempts, contextSetAttempts]);
+  }, [status, inviteData, inviteId, user, isAuthenticated, validationAttempts, contextSetAttempts, validationLoading]);
 
   // Log errors for debugging
   useEffect(() => {
@@ -103,26 +114,21 @@ export function InviteAcceptance() {
   // Handle the accept invite action
   const handleAcceptInvite = async () => {
     try {
+      console.log("🚀 Starting invite acceptance process");
       clearError();
       const result = await acceptInvite();
+      console.log("✅ Acceptance result:", result);
       if (result === "accepted") {
         setAcceptSuccess(true);
       }
     } catch (error) {
-      console.error("Error accepting invite:", error);
+      console.error("❌ Error accepting invite:", error);
     }
   };
 
-  // Improve error handling for cases where validation is stuck
-  useEffect(() => {
-    if (validationAttempts >= 3 && status === 'checking') {
-      console.log("⚠️ Forcing invitation status update due to timeout");
-      setNetworkError(new Error("Invitation validation timed out. Please try again."));
-    }
-  }, [validationAttempts, status]);
-
   // If no invite ID provided, show invalid invitation card
   if (!inviteId) {
+    console.log("❌ No invite ID found in URL");
     return (
       <InvalidInviteCard
         reason="No invitation ID was provided."
@@ -133,6 +139,7 @@ export function InviteAcceptance() {
 
   // If network error, show error card
   if (networkError && !validationLoading) {
+    console.log("🌐 Network error displayed:", networkError.message);
     return (
       <motion.div className="w-full max-w-md mx-auto">
         <NetworkErrorAlert 
@@ -154,6 +161,7 @@ export function InviteAcceptance() {
 
   // If validation timeout, show timeout UI
   if (validationAttempts >= 3 && status === 'checking') {
+    console.log("⌛ Displaying timeout UI after multiple validation attempts");
     return (
       <InvalidInviteCard
         reason="Invitation Check Timed Out"
@@ -166,6 +174,7 @@ export function InviteAcceptance() {
 
   // If validation error, show error card
   if (status === 'invalid' && validationError) {
+    console.log("🚫 Displaying invalid invite card due to validation error");
     return (
       <InvalidInviteCard
         reason={validationError?.message || "This invitation doesn't exist or has been revoked."}
@@ -176,6 +185,7 @@ export function InviteAcceptance() {
   }
 
   // Default case: show the invite acceptance card
+  console.log("📝 Rendering acceptance card with status:", status);
   return (
     <InviteAcceptanceCard
       status={status}

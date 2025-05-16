@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -140,8 +139,8 @@ export function usePair() {
   
   console.log("🔍 usePair hook called with user:", user?.id);
   
-  // Use maybeSingle instead of single since the user might not be in a pair
-  return useSupabaseQuery<Pair>(
+  // Add additional logging for debugging
+  const result = useSupabaseQuery<Pair>(
     'pairs',
     supabase
       .from('pairs')
@@ -149,8 +148,23 @@ export function usePair() {
       .or(`user_1_id.eq.${user?.id},user_2_id.eq.${user?.id}`)
       .maybeSingle(),
     [user?.id],
-    { enabled: isAuthenticated && !!user?.id }
+    { 
+      enabled: isAuthenticated && !!user?.id,
+      showErrors: false // Suppress errors for this query as no pair is expected for new users
+    }
   );
+  
+  // Log the result for debugging
+  useEffect(() => {
+    if (result.error) {
+      console.log("⚠️ usePair query error:", result.error.message);
+    }
+    if (result.data) {
+      console.log("✅ usePair found pair:", result.data);
+    }
+  }, [result.data, result.error]);
+  
+  return result;
 }
 
 // Enhanced hook for fetching the pair details

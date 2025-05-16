@@ -3,8 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFetchInviteData } from "./useInviteData";
 import { useInviteContext } from "./useInviteContext";
-
-type InviteStatus = 'checking' | 'valid' | 'invalid' | 'accepted' | 'expired' | 'auth_required';
+import { InviteStatus } from "@/components/invite/InviteStatus";
 
 export const useInviteValidation = (inviteId: string | null) => {
   const [retryCount, setRetryCount] = useState(0);
@@ -17,6 +16,9 @@ export const useInviteValidation = (inviteId: string | null) => {
                                       !isAuthenticated ? 'auth_required' : 
                                       'checking';
 
+  // Log user auth state
+  console.log("🔑 useInviteValidation: Auth state:", { isAuthenticated, userId: user?.id });
+
   const { 
     status, 
     inviteData, 
@@ -24,6 +26,9 @@ export const useInviteValidation = (inviteId: string | null) => {
     error,
     fetchInviteData
   } = useFetchInviteData(inviteId, isAuthenticated);
+  
+  // Log the current status
+  console.log(`🏷️ Invite validation status: ${status}, loading: ${loading}, hasData: ${!!inviteData}`);
   
   // Function to retry validation
   const refetch = useCallback(() => {
@@ -46,20 +51,34 @@ export const useInviteValidation = (inviteId: string | null) => {
     }
     
     // Prevent multiple simultaneous checks
-    if (loading || runOnce) return;
+    if (loading) {
+      console.log("⏳ Skipping fetch as we're already loading");
+      return;
+    }
     
+    if (runOnce) {
+      console.log("🔁 Skipping duplicate fetch (runOnce=true)");
+      return;
+    }
+    
+    console.log("🚀 Initiating invite data fetch, attempt:", retryCount + 1);
     fetchInviteData();
     setRunOnce(true);
     
   }, [inviteId, isAuthenticated, retryCount, loading, runOnce, fetchInviteData]);
 
+  // Final status to return - use the fetched status if available, otherwise use initial status
+  const finalStatus = loading ? 'checking' : status || initialStatus;
+  
+  console.log(`📊 useInviteValidation final output: status=${finalStatus}, loading=${loading}`);
+
   return { 
     loading, 
-    status: initialStatus || status, 
+    status: finalStatus, 
     inviteData, 
     error, 
     refetch,
     contextSetAttempts,
-    requiresAuth: status === 'auth_required'
+    requiresAuth: finalStatus === 'auth_required'
   };
 };
