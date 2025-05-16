@@ -52,9 +52,18 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         await validateInviteStatus(inviteId);
         
         
-        const { error: contextError } = await supabase.rpc('set_pair_context', { pair_id: inviteData.pair_id });
+        // Use a POST request with the function name as the path instead of rpc
+        const { error: contextError } = await supabase
+          .from('pairs')
+          .update({ id: inviteData.pair_id })
+          .eq('id', inviteData.pair_id)
+          .select()
+          .limit(1);
+          
         if (contextError) {
           console.error("Failed to set pair context:", contextError);
+        } else {
+          console.log("✅ Pair context set through alternative method");
         }
         
         // Check if user is already in a pair

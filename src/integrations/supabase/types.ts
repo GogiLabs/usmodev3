@@ -314,6 +314,10 @@ export type Database = {
         Args: { invite_id: string }
         Returns: undefined
       }
+      set_pair_context: {
+        Args: { pair_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
