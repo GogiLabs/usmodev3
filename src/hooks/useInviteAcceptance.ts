@@ -52,7 +52,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         await validateInviteStatus(inviteId);
         
         
-        await supabase.rpc('set_pair_context', { pair_id: inviteData.pair_id });
+        await supabase.rpc('set_pair_context' as any, { pair_id: inviteData.pair_id });
         // Check if user is already in a pair
         await checkForExistingPair(user.id, inviteData.pair_id);
         
