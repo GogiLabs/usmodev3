@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
@@ -33,10 +33,61 @@ const Index = () => {
         console.log("🔄 Found pending invite ID in storage:", pendingInviteId);
         console.log("🔀 Redirecting to invite page with stored ID");
         navigate(`/invite?invite_id=${pendingInviteId}`);
-        localStorage.removeItem("pending_invite_id");
       }
     }
   }, [inviteId, isAuthenticated, navigate]);
+  
+  // Force refresh pair data when landing on the index page after authentication
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const refreshPairData = async () => {
+        console.log("🔄 Forcing refresh of pair data for user:", user.id);
+        
+        try {
+          // First check if the user is in a pair
+          const { data: pairData } = await supabase
+            .from('pairs')
+            .select('id')
+            .or(`user_1_id.eq.${user.id},user_2_id.eq.${user.id}`)
+            .maybeSingle();
+            
+          console.log("🔍 Current pair data:", pairData);
+          
+          if (pairData?.id) {
+            // If we found a pair, try to refresh the pair details view
+            console.log("🔄 Refreshing pair details for pair:", pairData.id);
+            try {
+              // Try using the SQL function if available
+              const { data, error } = await supabase.rpc('refresh_pair_details', {
+                pair_id: pairData.id
+              });
+              
+              if (error) {
+                console.warn("⚠️ Error refreshing pair details via RPC:", error);
+              } else {
+                console.log("✅ Successfully refreshed pair details:", data);
+              }
+            } catch (e) {
+              console.error("❌ Error refreshing pair details:", e);
+              
+              // Fallback: try direct fetch
+              await supabase
+                .from('pair_details')
+                .select('*')
+                .or(`user_1_id.eq.${user.id},user_2_id.eq.${user.id}`)
+                .limit(1);
+                
+              console.log("🔄 Attempted direct refresh of pair details");
+            }
+          }
+        } catch (error) {
+          console.error("❌ Error during pair refresh:", error);
+        }
+      };
+      
+      refreshPairData();
+    }
+  }, [isAuthenticated, user?.id]);
   
   return (
     <Dashboard />

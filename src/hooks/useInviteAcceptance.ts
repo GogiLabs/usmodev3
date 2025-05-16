@@ -1,7 +1,8 @@
 
 import { useInviteAcceptanceState } from "./useInviteAcceptanceState";
 import { validateInviteStatus, checkForExistingPair, useAuthValidation } from "./useInviteValidations";
-import { updatePair, markInviteAsAccepted } from "./useInvitePairUpdates";
+import { updatePair, markInviteAsAccepted, checkUserPair } from "./useInvitePairUpdates";
+import { supabase } from "@/integrations/supabase/client";
 
 type InviteData = {
   pair_id?: string;
@@ -45,6 +46,8 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       try {
         const { user } = validateAuth();
         
+        console.log("👤 Authenticated user for invite acceptance:", { userId: user.id });
+        
         // Validate invitation status
         await validateInviteStatus(inviteId);
         
@@ -56,6 +59,22 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         
         // Mark invitation as accepted
         await markInviteAsAccepted(inviteId);
+        
+        // Double check that the user is now in a pair
+        const pairCheck = await checkUserPair(user.id);
+        console.log("✅ Final pair verification after update:", pairCheck);
+        
+        if (!pairCheck.data) {
+          console.warn("⚠️ User pair data not found after update, forcing refresh");
+          
+          // Try to explicitly refresh the view or cache
+          try {
+            const { error } = await supabase.rpc('refresh_pair_details');
+            if (error) console.error("❌ Error refreshing pair details:", error);
+          } catch (refreshError) {
+            console.error("❌ Error calling refresh function:", refreshError);
+          }
+        }
         
         // Handle success and navigation
         handleSuccess(inviteData.sender_name);

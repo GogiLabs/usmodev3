@@ -139,18 +139,22 @@ export function usePair() {
   
   console.log("🔍 usePair hook called with user:", user?.id);
   
-  // Add additional logging for debugging
+  // Add additional logging for debugging and use or to construct the query
+  const userIdString = user?.id ? `user_1_id.eq.${user.id},user_2_id.eq.${user.id}` : null;
+  console.log("🔍 usePair query conditions:", userIdString);
+  
   const result = useSupabaseQuery<Pair>(
     'pairs',
     supabase
       .from('pairs')
       .select('*')
-      .or(`user_1_id.eq.${user?.id},user_2_id.eq.${user?.id}`)
+      .or(userIdString || 'user_1_id.is.null') // Fallback that won't match anything
       .maybeSingle(),
     [user?.id],
     { 
       enabled: isAuthenticated && !!user?.id,
-      showErrors: false // Suppress errors for this query as no pair is expected for new users
+      showErrors: false, // Suppress errors for this query as no pair is expected for new users
+      retries: 3 // Increase retries for this critical data
     }
   );
   
@@ -161,6 +165,8 @@ export function usePair() {
     }
     if (result.data) {
       console.log("✅ usePair found pair:", result.data);
+    } else {
+      console.log("ℹ️ usePair: No pair data found");
     }
   }, [result.data, result.error]);
   
@@ -172,20 +178,35 @@ export function usePairDetails() {
   const { user, isAuthenticated } = useAuth();
   const { isOffline } = useConnectionStatus();
   
+  const userIdString = user?.id ? `user_1_id.eq.${user.id},user_2_id.eq.${user.id}` : null;
+  console.log("🔍 usePairDetails query conditions:", userIdString);
+  
   const result = useSupabaseQuery<Database['public']['Views']['pair_details']['Row']>(
     'pair_details',
     supabase
       .from('pair_details')
       .select('*')
-      .or(`user_1_id.eq.${user?.id},user_2_id.eq.${user?.id}`)
+      .or(userIdString || 'user_1_id.is.null') // Fallback that won't match anything
       .maybeSingle(),
     [user?.id],
     { 
       enabled: isAuthenticated && !!user?.id,
-      retries: isOffline ? 0 : 2,
+      retries: isOffline ? 0 : 3, // More retries when online
       showErrors: !isOffline // Only show errors when online
     }
   );
+  
+  // Add detailed logging for pair details
+  useEffect(() => {
+    if (result.error) {
+      console.log("⚠️ usePairDetails query error:", result.error.message);
+    }
+    if (result.data) {
+      console.log("✅ usePairDetails found pair details:", result.data);
+    } else {
+      console.log("ℹ️ usePairDetails: No pair details found");
+    }
+  }, [result.data, result.error]);
   
   // Add helper for checking if pair is complete (both users exist)
   const isPairComplete = result.data?.user_1_id && result.data?.user_2_id;

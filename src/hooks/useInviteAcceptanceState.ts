@@ -4,12 +4,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from 'sonner';
 import { useNavigate } from "react-router-dom";
 
-type InviteData = {
-  pair_id?: string;
-  sender_name?: string;
-  sender_email?: string;
-} | null;
-
 export function useInviteAcceptanceState() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -19,6 +13,8 @@ export function useInviteAcceptanceState() {
   const clearError = useCallback(() => setError(null), []);
   
   const handleSuccess = useCallback((senderName?: string) => {
+    console.log("🎉 Invite acceptance successful for partner:", senderName || 'unknown');
+    
     // Show success toasts
     toast({
       title: "Invitation accepted!",
@@ -32,10 +28,13 @@ export function useInviteAcceptanceState() {
     // Clear any potential pending invite ID from storage
     localStorage.removeItem('pending_invite_id');
     
-    // Add a slight delay before redirecting to allow the user to read the success message
+    // Force a short delay before redirecting to allow any database operations to complete
+    // and to let the user see the success message
+    console.log("⏱️ Setting timeout for navigation to home page");
     setTimeout(() => {
-      navigate('/');
-    }, 800);
+      console.log("🏠 Navigating to home page after successful invite acceptance");
+      navigate('/', { replace: true });
+    }, 1500);
   }, [toast, navigate]);
   
   const handleError = useCallback((error: any) => {
