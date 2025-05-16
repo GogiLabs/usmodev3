@@ -80,11 +80,8 @@ const InvitePage = () => {
       
       // Now that we're authenticated, we can set the invite context
       setInviteContext();
-      
-      // Remove the stored invite ID as we're now handling it
-      localStorage.removeItem("pending_invite_id");
     }
-  }, [inviteId, isAuthenticated, navigate]);
+  }, [inviteId, isAuthenticated, navigate, user]);
   
   // Page transitions for smoother UX
   const pageVariants = {

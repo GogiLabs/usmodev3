@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +52,15 @@ export function useSupabaseQuery<T>(
         const { data: result, error: queryError } = await query;
         
         console.log(`📊 ${tableName} query result:`, { result, queryError });
+        
+        // Special handling for PGRST116 error (no rows returned)
+        if (queryError && queryError.code === 'PGRST116') {
+          console.log(`ℹ️ No rows found in ${tableName}. This is expected in some cases.`);
+          setIsEmpty(true);
+          setData(null);
+          setError(null);
+          return;
+        }
         
         if (queryError) throw new Error(queryError.message);
         
@@ -130,13 +140,14 @@ export function usePair() {
   
   console.log("🔍 usePair hook called with user:", user?.id);
   
+  // Use maybeSingle instead of single since the user might not be in a pair
   return useSupabaseQuery<Pair>(
     'pairs',
     supabase
       .from('pairs')
       .select('*')
       .or(`user_1_id.eq.${user?.id},user_2_id.eq.${user?.id}`)
-      .single(),
+      .maybeSingle(),
     [user?.id],
     { enabled: isAuthenticated && !!user?.id }
   );

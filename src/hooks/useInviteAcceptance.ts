@@ -25,7 +25,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
     console.log("🔍 acceptInvite called with:", { inviteId, inviteData, user, isAuthenticated });
     
     if (!isAuthenticated || !user) {
-      const errorMessage = "You must  be logged in to accept this invitation.";
+      const errorMessage = "You must be logged in to accept this invitation.";
       setError(new Error(errorMessage));
       
       toast({
@@ -135,6 +135,9 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         throw new Error(inviteError.message || "Failed to update invitation status");
       }
       
+      // Clear any potential pending invite ID from storage
+      localStorage.removeItem('pending_invite_id');
+      
       // Success!
       toast({
         title: "Invitation accepted!",
@@ -144,6 +147,11 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       sonnerToast.success("Connection established!", {
         description: `You are now paired with ${inviteData.sender_name || 'your partner'}.`
       });
+      
+      // Add a slight delay before redirecting to allow the user to read the success message
+      setTimeout(() => {
+        navigate('/');
+      }, 800);
       
       return 'accepted';
       
