@@ -8,6 +8,12 @@ export async function updatePair(pairId: string, userId: string) {
   
   try {
     // First, verify the pair exists
+
+    const { data: testData, error: testError } = await supabase
+  .rpc('get_pair_context'); // You would need to define this RPC to return current_setting('request.pair_id', true)
+
+console.log("🧪 Session variable test:", { testData, testError });
+    
     const { data: pairCheck, error: checkError } = await supabase
       .from('pairs')
       .select('id, user_1_id, user_2_id')
