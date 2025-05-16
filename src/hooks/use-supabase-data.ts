@@ -31,6 +31,7 @@ export function useSupabaseQuery<T>(
   
   // Manual refetch function
   const refetch = () => {
+    console.log(`🔄 Manually refetching data from ${tableName}`);
     setRetryCount(prev => prev + 1);
   };
 
@@ -42,10 +43,14 @@ export function useSupabaseQuery<T>(
 
     const fetchData = async () => {
       try {
+        console.log(`🔍 Fetching data from ${tableName} with params:`, { dependencies, enabled: options.enabled });
         setIsLoading(true);
         setError(null);
         
+        console.log(`📡 Executing Supabase query for ${tableName}`);
         const { data: result, error: queryError } = await query;
+        
+        console.log(`📊 ${tableName} query result:`, { result, queryError });
         
         if (queryError) throw new Error(queryError.message);
         
@@ -58,7 +63,7 @@ export function useSupabaseQuery<T>(
         
         setData(result);
       } catch (err: any) {
-        console.error(`Error fetching data from ${tableName}:`, err);
+        console.error(`❌ Error fetching data from ${tableName}:`, err);
         setError(err instanceof Error ? err : new Error(err.message || "Failed to fetch data"));
         
         // Only show toast if configured to do so
@@ -89,13 +94,15 @@ export function useSupabaseQuery<T>(
     
     // Set up realtime subscription for supported tables
     if (['tasks', 'rewards', 'invites', 'pairs', 'profiles'].includes(tableName) && !isOffline) {
+      console.log(`📡 Setting up realtime subscription for ${tableName}`);
       const subscription = supabase
         .channel(`${tableName}_changes`)
         .on('postgres_changes', {
           event: '*', 
           schema: 'public',
           table: tableName,
-        }, () => {
+        }, (payload) => {
+          console.log(`🔔 Realtime update received for ${tableName}:`, payload);
           // When data changes, refetch
           fetchData();
         })
@@ -120,6 +127,8 @@ export function useSupabaseQuery<T>(
 // Hook for fetching the user's pair
 export function usePair() {
   const { user, isAuthenticated } = useAuth();
+  
+  console.log("🔍 usePair hook called with user:", user?.id);
   
   return useSupabaseQuery<Pair>(
     'pairs',

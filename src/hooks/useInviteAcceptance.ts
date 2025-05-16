@@ -22,6 +22,8 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
   const clearError = useCallback(() => setError(null), []);
 
   const acceptInvite = async () => {
+    console.log("🔍 acceptInvite called with:", { inviteId, inviteData, user, isAuthenticated });
+    
     if (!isAuthenticated || !user) {
       const errorMessage = "You must  be logged in to accept this invitation.";
       setError(new Error(errorMessage));
@@ -63,11 +65,14 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       clearError();
       
       // Check invitation status once more before accepting
+      console.log("🔍 Checking invitation status before accepting:", { inviteId });
       const { data: invite, error: checkError } = await supabase
         .from('invites')
         .select('status, expires_at')
         .eq('id', inviteId)
         .maybeSingle();
+      
+      console.log("📋 Invite verification result:", { invite, checkError });
       
       if (checkError) {
         throw new Error(checkError.message || "Failed to verify invitation status");
@@ -86,11 +91,14 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       }
       
       // Check if user is already in a pair
+      console.log("🔍 Checking if user is already in a pair:", { userId: user.id });
       const { data: existingPair, error: pairError } = await supabase
         .from('pairs')
         .select('id')
         .or(`user_1_id.eq.${user.id},user_2_id.eq.${user.id}`)
         .maybeSingle();
+      
+      console.log("👥 Existing pair check result:", { existingPair, pairError });
       
       if (pairError && pairError.code !== 'PGRST116') {
         // PGRST116 means "no rows returned" which is actually what we want
@@ -102,20 +110,26 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       }
       
       // Begin transaction to update pair and invitation status
+      console.log("🔄 Updating pair with user:", { pairId: inviteData.pair_id, userId: user.id });
       const { error: updateError } = await supabase
         .from('pairs')
         .update({ user_2_id: user.id })
         .eq('id', inviteData.pair_id);
+      
+      console.log("✏️ Pair update result:", { updateError });
       
       if (updateError) {
         throw new Error(updateError.message || "Failed to update pair");
       }
       
       // Mark invitation as accepted
+      console.log("🔄 Marking invitation as accepted:", { inviteId });
       const { error: inviteError } = await supabase
         .from('invites')
         .update({ status: 'accepted' })
         .eq('id', inviteId);
+      
+      console.log("✏️ Invite update result:", { inviteError });
       
       if (inviteError) {
         throw new Error(inviteError.message || "Failed to update invitation status");
@@ -134,7 +148,7 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
       return 'accepted';
       
     } catch (error: any) {
-      console.error("Error accepting invite:", error);
+      console.error("❌ Error accepting invite:", error);
       const errorMessage = error.message || "An unexpected error occurred";
       
       setError(error instanceof Error ? error : new Error(errorMessage));

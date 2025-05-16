@@ -24,7 +24,8 @@ const InvitePage = () => {
   const [redirectingToAuth, setRedirectingToAuth] = useState(false);
 
   useEffect(() => {
-    console.log("🔍 Invite ID from URL:", inviteId);
+    console.log("🔍 InvitePage useEffect - Invite ID from URL:", inviteId);
+    console.log("🔍 InvitePage auth state:", { isAuthenticated, user });
     
     if (!inviteId) {
       // Show warning about missing invite ID after a short delay
@@ -42,6 +43,7 @@ const InvitePage = () => {
       
       // Short delay before redirecting to give user context
       const timer = setTimeout(() => {
+        console.log("🔀 Redirecting to auth with invite_id:", inviteId);
         setRedirectingToAuth(true);
         navigate(`/auth?invite_id=${inviteId}`);
       }, 1500);
@@ -52,10 +54,12 @@ const InvitePage = () => {
     if (inviteId && isAuthenticated) {
       // Only try to initialize the invite context when authenticated
       const setInviteContext = async () => {
+        console.log("🔄 Attempting to set invite context after authentication");
         try {
           // Try up to 3 times with backoff
           for (let i = 0; i < 3; i++) {
             try {
+              console.log(`🔄 Context init attempt ${i+1} for invite:`, inviteId);
               await supabase.rpc('set_invite_context' as any, { invite_id: inviteId });
               console.log("✅ Invite context initialized after authentication");
               break;
