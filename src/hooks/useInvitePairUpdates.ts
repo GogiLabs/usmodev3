@@ -8,9 +8,6 @@ export async function updatePair(pairId: string, userId: string) {
   
   try {
     // First, verify the pair exists
-
-const { data: context, error } = await supabase.rpc('get_pair_context');
-console.log("🔐 Pair context:", context);
     
     const { data: pairCheck, error: checkError } = await supabase
       .from('pairs')
