@@ -67,9 +67,11 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         if (!pairCheck.data) {
           console.warn("⚠️ User pair data not found after update, forcing refresh");
           
-          // Try to explicitly refresh the view or cache
+          // Try to explicitly refresh the view or cache using the edge function
           try {
-            const { error } = await supabase.rpc('refresh_pair_details');
+            const { error } = await supabase.functions.invoke('refresh-pair-details', {
+              body: { pairId: inviteData.pair_id, userId: user.id }
+            });
             if (error) console.error("❌ Error refreshing pair details:", error);
           } catch (refreshError) {
             console.error("❌ Error calling refresh function:", refreshError);

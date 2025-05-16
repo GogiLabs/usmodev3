@@ -37,8 +37,21 @@ export async function updatePair(pairId: string, userId: string) {
       throw new Error(updateError.message || "Failed to update pair");
     }
     
-    // Force refresh the pairs and pair_details
-    await supabase.rpc('refresh_pair_details');
+    // Force refresh the pair details using the edge function
+    try {
+      console.log("🔄 Calling edge function to refresh pair details:", { pairId, userId });
+      const { data, error } = await supabase.functions.invoke('refresh-pair-details', {
+        body: { pairId, userId }
+      });
+      
+      if (error) {
+        console.warn("⚠️ Edge function error:", error);
+      } else {
+        console.log("✅ Edge function refresh successful:", data);
+      }
+    } catch (refreshError) {
+      console.warn("⚠️ Failed to call refresh edge function:", refreshError);
+    }
     
     return true;
   } catch (error) {

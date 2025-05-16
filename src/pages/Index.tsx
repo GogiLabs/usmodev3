@@ -54,16 +54,16 @@ const Index = () => {
           console.log("🔍 Current pair data:", pairData);
           
           if (pairData?.id) {
-            // If we found a pair, try to refresh the pair details view
+            // If we found a pair, try to refresh the pair details view using the edge function
             console.log("🔄 Refreshing pair details for pair:", pairData.id);
             try {
-              // Try using the SQL function if available
-              const { data, error } = await supabase.rpc('refresh_pair_details', {
-                pair_id: pairData.id
+              // Use the edge function to refresh pair details
+              const { data, error } = await supabase.functions.invoke('refresh-pair-details', {
+                body: { pairId: pairData.id, userId: user.id }
               });
               
               if (error) {
-                console.warn("⚠️ Error refreshing pair details via RPC:", error);
+                console.warn("⚠️ Error refreshing pair details via edge function:", error);
               } else {
                 console.log("✅ Successfully refreshed pair details:", data);
               }
