@@ -3,8 +3,10 @@ import React from "react";
 import { CheckCircle, XCircle, Clock, AlertCircle, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+export type InviteStatus = "checking" | "valid" | "invalid" | "accepted" | "expired" | "auth_required";
+
 type InviteStatusProps = {
-  status: "checking" | "valid" | "invalid" | "accepted" | "expired" | "auth_required";
+  status: InviteStatus;
   senderName?: string;
   onRetry?: () => void;
 };

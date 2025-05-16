@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInviteContext } from "./useInviteContext";
-
-type InviteStatus = 'checking' | 'valid' | 'invalid' | 'accepted' | 'expired' | 'auth_required';
+import { InviteStatus } from "@/components/invite/InviteStatus";
 
 type InviteData = {
   sender_email?: string;

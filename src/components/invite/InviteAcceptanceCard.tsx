@@ -8,8 +8,10 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { InviteStatusDisplay } from "@/components/invite/InviteStatus";
 import { useState, useEffect } from "react";
 
+type InviteStatus = "checking" | "valid" | "invalid" | "accepted" | "expired" | "auth_required";
+
 type InviteAcceptanceCardProps = {
-  status: string;
+  status: InviteStatus;
   loading: boolean;
   error: Error | null;
   senderName?: string;
@@ -90,7 +92,7 @@ export function InviteAcceptanceCard({
               <LoadingSpinner size="lg" text="Checking invitation status..." />
             ) : (
               <InviteStatusDisplay 
-                status={acceptSuccess ? 'accepted' : status} 
+                status={acceptSuccess ? 'accepted' as InviteStatus : status} 
                 senderName={senderName} 
                 onRetry={onRetry} 
               />

@@ -19,7 +19,6 @@ export const useInviteValidation = (inviteId: string | null) => {
 
   const { 
     status, 
-    setStatus,
     inviteData, 
     loading, 
     error,
