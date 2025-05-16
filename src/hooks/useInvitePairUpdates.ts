@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export async function updatePair(pairId: string, userId: string) {
   console.log("🔄 Updating pair with user:", { pairId, userId });
 
-  await supabase.rpc('set_pair_context', { pair_id: inviteData.pair_id });
+  await supabase.rpc('set_pair_context', { pair_id: pairId });
   
   try {
     // First, verify the pair exists
