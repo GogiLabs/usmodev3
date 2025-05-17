@@ -42,7 +42,7 @@ export function EmptyStateBanner({ type = "tasks" }: EmptyStateBannerProps) {
       </div>
     );
   }
-  
+  /*
   return (
     <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-4 mb-6 animate-fade-in">
       <div className="flex items-center mb-2">
@@ -57,4 +57,5 @@ export function EmptyStateBanner({ type = "tasks" }: EmptyStateBannerProps) {
       </div>
     </div>
   );
+  */
 }
