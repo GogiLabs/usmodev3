@@ -28,7 +28,6 @@ export function Header() {
         </div>
         
         <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
-          <PointsDisplay className={isMobile ? "flex-1 text-xs" : ""} />
           
           {!isAuthenticated ? (
             <Button 
