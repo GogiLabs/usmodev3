@@ -16,39 +16,43 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the Auth context of the logged in user
+    // Create a Supabase client with the service role key since we're not requiring auth
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       {
         global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
+          headers: { 
+            // Still pass along any auth headers that might be present
+            Authorization: req.headers.get("Authorization") || ""
+          },
         },
       }
     );
 
     // Extract request payload
     const { pairId, userId } = await req.json();
-
-    // Verify authentication
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser();
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    
+    if (!pairId) {
+      return new Response(JSON.stringify({ error: "Missing required parameter: pairId" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401,
+        status: 400,
       });
     }
 
+    // No auth verification - proceed directly to refreshing the pair details
+    console.log("Refreshing pair details for:", { pairId, userId });
+    
     // Call the refresh function
     const { data, error } = await supabaseClient.rpc("refresh_pair_details", {
       pair_id: pairId,
-      user_id: userId || user.id 
+      user_id: userId 
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error refreshing pair details:", error);
+      throw error;
+    }
 
     // Return the result
     return new Response(JSON.stringify({ 
@@ -60,6 +64,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
+    console.error("Function execution error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,

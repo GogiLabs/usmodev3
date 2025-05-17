@@ -7,3 +7,7 @@ verify_jwt = true
 # Add configuration for handling invite context
 [functions.set-invite-context]
 verify_jwt = false
+
+# Set verify_jwt to false for the refresh-pair-details function
+[functions.refresh-pair-details]
+verify_jwt = false
