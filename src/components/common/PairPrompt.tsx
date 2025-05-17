@@ -111,11 +111,11 @@ export function PairPrompt({ className, compact = false }: PairPromptProps) {
         </motion.div>
       </CardContent>
       
-      <CardFooter>
+      {/*<CardFooter>
         <div className="text-sm text-muted-foreground text-center w-full">
           Need to invite someone else? <Button variant="link" className="h-auto p-0" onClick={() => navigate("/invite")}>Manage invitations</Button>
         </div>
-      </CardFooter>
+      </CardFooter>*/}
     </Card>
   );
 
