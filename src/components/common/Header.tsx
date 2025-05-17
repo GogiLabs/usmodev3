@@ -1,6 +1,6 @@
 
 import { useAuth } from "@/contexts/AuthContext";
-//import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { LogIn, LogOut, User } from "lucide-react";
 import { PointsDisplay } from "./PointsDisplay";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,7 +28,7 @@ export function Header() {
         </div>
         
         <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
-          
+          <PointsDisplay className={isMobile ? "flex-1 text-xs" : ""} />
           
           {!isAuthenticated ? (
             <Button 
