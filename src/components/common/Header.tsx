@@ -6,7 +6,7 @@ import { PointsDisplay } from "./PointsDisplay";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "react-router-dom";
 import { ProfileSettings } from "./ProfileSettings";
-import { InviteHandler } from "./InviteHandler";
+//import { InviteHandler } from "./InviteHandler";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +44,6 @@ export function Header() {
             </Button>
           ) : (
             <>
-            //<InviteHandler />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent/5">
