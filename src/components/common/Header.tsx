@@ -44,7 +44,7 @@ export function Header() {
             </Button>
           ) : (
             <>
-              <InviteHandler />
+            //<InviteHandler />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="border-accent text-accent hover:bg-accent/5">
