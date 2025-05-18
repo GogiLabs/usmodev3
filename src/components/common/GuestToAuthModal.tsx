@@ -7,6 +7,7 @@ import { usePairDetails } from "@/hooks/use-supabase-data";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ArrowRight, Save, UserPlus } from "lucide-react";
 import { InviteHandler } from "@/components/common/InviteHandler";
+import { useSearchParams, useLocation } from "react-router-dom";
 
 // This component handles the transition from guest mode to authenticated mode
 export function GuestToAuthModal() {
@@ -14,14 +15,26 @@ export function GuestToAuthModal() {
   const { isAuthenticated, user } = useAuth();
   const { data: pairDetails, isLoading } = usePairDetails();
   const [previousAuthState, setPreviousAuthState] = useState(false);
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const inviteId = searchParams.get("invite_id") || searchParams.get("inviteId");
+  const pendingInviteId = localStorage.getItem("pending_invite_id");
+  
+  // Check if user has a pending invitation (either from URL or localStorage)
+  const hasPendingInvitation = !!inviteId || !!pendingInviteId;
   
   // Check if user has just logged in
   useEffect(() => {
     if (isAuthenticated && !previousAuthState) {
-      setOpen(true);
+      // Don't show the modal if the user has a pending invitation to accept
+      if (!hasPendingInvitation) {
+        setOpen(true);
+      } else {
+        console.log("Skipping welcome modal because user has a pending invitation");
+      }
     }
     setPreviousAuthState(isAuthenticated);
-  }, [isAuthenticated, previousAuthState]);
+  }, [isAuthenticated, previousAuthState, hasPendingInvitation]);
   
   // Determine if user is paired
   const isPaired = pairDetails?.user_1_id && pairDetails?.user_2_id;
@@ -29,7 +42,8 @@ export function GuestToAuthModal() {
   // Determing if user has pending invite
   const hasPendingInvite = !!pairDetails?.user_1_id && !pairDetails?.user_2_id;
   
-  if (!isAuthenticated || isPaired || hasPendingInvite || !open) {
+  // If user is not authenticated or is paired or has a pending invite or came from an invitation link, don't show the modal
+  if (!isAuthenticated || isPaired || hasPendingInvite || !open || hasPendingInvitation) {
     return null;
   }
   
