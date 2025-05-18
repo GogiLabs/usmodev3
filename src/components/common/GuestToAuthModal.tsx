@@ -25,8 +25,11 @@ export function GuestToAuthModal() {
   
   // Determine if user is paired
   const isPaired = pairDetails?.user_1_id && pairDetails?.user_2_id;
+
+  // Determing if user has pending invite
+  const hasPendingInvite = !!pairDetails?.user_1_id && !pairDetails?.user_2_id;
   
-  if (!isAuthenticated || isPaired || !open) {
+  if (!isAuthenticated || isPaired || hasPendingInvite || !open) {
     return null;
   }
   
