@@ -55,22 +55,6 @@ export const useInviteAcceptance = (inviteId: string | null, inviteData: InviteD
         await validateInviteStatus(inviteId);
         console.log("✅ [useInviteAcceptance] Invitation status validated successfully");
         
-        
-        // Use a POST request with the function name as the path instead of rpc
-        console.log("🔄 [useInviteAcceptance] Setting pair context:", { pairId: inviteData.pair_id });
-        const { error: contextError } = await supabase
-          .from('pairs')
-          .update({ id: inviteData.pair_id })
-          .eq('id', inviteData.pair_id)
-          .select()
-          .limit(1);
-          
-        if (contextError) {
-          console.error("❌ [useInviteAcceptance] Failed to set pair context:", contextError);
-        } else {
-          console.log("✅ [useInviteAcceptance] Pair context set through alternative method");
-        }
-        
         // Check if user is already in a pair
         console.log("🔄 [useInviteAcceptance] Checking if user is already in a pair:", { userId: user.id });
         await checkForExistingPair(user.id, inviteData.pair_id);
