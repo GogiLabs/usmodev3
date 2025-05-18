@@ -22,6 +22,26 @@ export function GuestToAuthModal() {
     }
     setPreviousAuthState(isAuthenticated);
   }, [isAuthenticated, previousAuthState]);
+
+  //check if user has a pending invite
+    useEffect(() => {
+    const checkPendingInvite = async () => {
+      if (!user?.email) return;
+
+      const { data, error } = await supabase
+        .from('invites')
+        .select('id')
+        .eq('recipient_email', user.email)
+        .eq('status', 'pending')
+        .limit(1);
+
+      if (!error && data.length > 0) {
+        setHasPendingInvite(true);
+      }
+    };
+
+    checkPendingInvite();
+  }, [user]);
   
   // Determine if user is paired
   const isPaired = pairDetails?.user_1_id && pairDetails?.user_2_id;
@@ -77,7 +97,7 @@ export function GuestToAuthModal() {
               <p className="text-sm text-muted-foreground mb-3">
                 To sync tasks and rewards across devices, you need to connect with your partner.
               </p>
-              <InviteHandler />
+              {!hasPendingInvite && <InviteHandler />}
             </div>
           </div>
         </div>
