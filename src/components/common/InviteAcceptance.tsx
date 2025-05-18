@@ -22,8 +22,12 @@ export function InviteAcceptance() {
 
   // Log the invite ID for debugging
   useEffect(() => {
-    console.log("🔍 InviteAcceptance: inviteId =", inviteId);
-  }, [inviteId]);
+    console.log("🔍 [InviteAcceptance] Component mounted with inviteId:", inviteId);
+    console.log("🔍 [InviteAcceptance] Auth state:", { 
+      isAuthenticated, 
+      userId: user?.id 
+    });
+  }, [inviteId, isAuthenticated, user]);
 
   // Get invite validation from hook
   const {
@@ -37,7 +41,13 @@ export function InviteAcceptance() {
 
   // Log validation result
   useEffect(() => {
-    console.log("🔍 Validation update:", { status, inviteData, validationLoading, error: validationError?.message });
+    console.log("🔍 [InviteAcceptance] Validation update:", { 
+      status, 
+      inviteDataPresent: !!inviteData,
+      pairId: inviteData?.pair_id,
+      validationLoading, 
+      error: validationError?.message 
+    });
   }, [status, inviteData, validationLoading, validationError]);
 
   // Get invite acceptance logic from hook
@@ -51,14 +61,14 @@ export function InviteAcceptance() {
   // Detect if we've been stuck in "checking" status for too long
   useEffect(() => {
     if (status === 'checking' && validationLoading) {
-      console.log("⏱️ Checking if we're stuck in validation...");
+      console.log("⏱️ [InviteAcceptance] Checking if we're stuck in validation...");
       const timer = setTimeout(() => {
         setValidationAttempts(prev => {
           const newCount = prev + 1;
-          console.log(`⚠️ Validation taking too long, attempt ${newCount}`);
+          console.log(`⚠️ [InviteAcceptance] Validation taking too long, attempt ${newCount}`);
           // If we've already tried 3 times, force an invalid state
           if (newCount >= 3) {
-            console.log("⛔ Invite validation timed out after multiple attempts");
+            console.log("⛔ [InviteAcceptance] Invite validation timed out after multiple attempts");
             setNetworkError(new Error("Invitation validation timed out. Please try again."));
             return newCount;
           }
@@ -87,23 +97,24 @@ export function InviteAcceptance() {
       isLoading: validationLoading
     };
     
-    console.log("📬 InviteAcceptance state:", debugData);
+    console.log("📬 [InviteAcceptance] Current state:", debugData);
     setDebugInfo(debugData);
   }, [status, inviteData, inviteId, user, isAuthenticated, validationAttempts, contextSetAttempts, validationLoading]);
 
   // Log errors for debugging
   useEffect(() => {
     if (validationError) {
-      console.error("❌ Validation Error:", validationError);
+      console.error("❌ [InviteAcceptance] Validation Error:", validationError);
     }
     if (acceptError) {
-      console.error("❌ Acceptance Error:", acceptError);
+      console.error("❌ [InviteAcceptance] Acceptance Error:", acceptError);
     }
   }, [validationError, acceptError]);
 
   // Handle successful acceptance
   useEffect(() => {
     if (acceptSuccess) {
+      console.log("🎉 [InviteAcceptance] Successfully connected with partner!");
       sonnerToast.success("Connection established!", {
         description: "You've successfully paired with your partner.",
         duration: 5000,
@@ -114,21 +125,22 @@ export function InviteAcceptance() {
   // Handle the accept invite action
   const handleAcceptInvite = async () => {
     try {
-      console.log("🚀 Starting invite acceptance process");
+      console.log("🚀 [InviteAcceptance] Starting invite acceptance process");
       clearError();
       const result = await acceptInvite();
-      console.log("✅ Acceptance result:", result);
+      console.log("✅ [InviteAcceptance] Acceptance result:", result);
       if (result === "accepted") {
+        console.log("🎉 [InviteAcceptance] Setting acceptance success state to true");
         setAcceptSuccess(true);
       }
     } catch (error) {
-      console.error("❌ Error accepting invite:", error);
+      console.error("❌ [InviteAcceptance] Error accepting invite:", error);
     }
   };
 
   // If no invite ID provided, show invalid invitation card
   if (!inviteId) {
-    console.log("❌ No invite ID found in URL");
+    console.log("❌ [InviteAcceptance] No invite ID found in URL");
     return (
       <InvalidInviteCard
         reason="No invitation ID was provided."
