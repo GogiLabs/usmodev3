@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
-import { useTask } from "@/contexts/task/TaskContext";
+import { useTask } from "@/contexts/task";
 import { CheckCircle, Circle, Sparkles, Trash2, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";

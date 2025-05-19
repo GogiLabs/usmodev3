@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,7 +8,7 @@ import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import InvitePage from "./pages/InvitePage";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
-import { TaskProvider } from "./contexts/task/TaskContext";
+import { TaskProvider } from "./contexts/task";
 import { RewardProvider } from "./contexts/reward/RewardContext";
 import { NetworkStatusIndicator } from "./components/common/NetworkStatusIndicator";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
