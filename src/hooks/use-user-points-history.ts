@@ -63,8 +63,9 @@ export function useUserPointsHistory() {
           // For reward data, ensure it matches our expected structure
           // For reward data
           let rewardData: { description: string } | null = null;
-          if (item.reward && typeof item.reward === 'object' && item.reward.description) {
-            rewardData = { description: item.reward.description };
+          const taskDescription = item.task?.description;
+          if (typeof taskDescription === 'string') {
+            taskData = { description: taskDescription };
           }
           
           return {
