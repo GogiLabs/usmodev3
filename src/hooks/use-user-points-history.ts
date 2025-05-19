@@ -65,8 +65,8 @@ export function useUserPointsHistory() {
           // For task data, check if it exists and isn't an error
           if (typeof item.task === 'object' && !hasErrorProperty(item.task) && item.task) {
             // Safe to access description now
-            const description = item.task.description;
-            if (typeof description === 'string') {
+            //const description = item.task.description;
+            if (typeof item.task.description === 'string') {
               taskData = { description };
             }
           }
