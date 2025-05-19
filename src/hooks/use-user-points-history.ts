@@ -63,7 +63,7 @@ export function useUserPointsHistory() {
           let rewardData: { description: string } | null = null;
 
           // For task data, check if it exists and isn't an error
-          if (item.task && typeof item.task === 'object' && !hasErrorProperty(item.task)) {
+          if (typeof item.task === 'object' && !hasErrorProperty(item.task) && item.task) {
             // Safe to access description now
             const description = item.task.description;
             if (typeof description === 'string') {
@@ -72,7 +72,7 @@ export function useUserPointsHistory() {
           }
 
           // For reward data, check if it exists and isn't an error
-          if (item.reward && typeof item.reward === 'object' && !hasErrorProperty(item.reward)) {
+          if (typeof item.reward === 'object' && !hasErrorProperty(item.reward) && item.reward) {
             // Safe to access description now
             const description = item.reward.description;
             if (typeof description === 'string') {
