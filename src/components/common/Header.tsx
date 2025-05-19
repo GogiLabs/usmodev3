@@ -26,9 +26,7 @@ export function Header() {
             <ProfileSettings />
           </>
         )}
-        <PairPrompt />
-        <PairedUserBanner />
-        <InviteHandler />
+        
       </div>
     </header>
   );
