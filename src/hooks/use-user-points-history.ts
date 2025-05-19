@@ -61,18 +61,10 @@ export function useUserPointsHistory() {
           }
 
           // For reward data, ensure it matches our expected structure
-          let rewardData = null;
-          
-          // First check if item.reward exists and is an object
-          if (item.reward && typeof item.reward === 'object') {
-            // Check that it's not an error object and has a description
-            if (!('error' in item.reward)) {
-              // Use optional chaining to safely access the description property
-              const description = item.reward?.description;
-              if (description) {
-                rewardData = { description };
-              }
-            }
+          // For reward data
+          let rewardData: { description: string } | null = null;
+          if (item.reward && typeof item.reward === 'object' && item.reward.description) {
+            rewardData = { description: item.reward.description };
           }
           
           return {
