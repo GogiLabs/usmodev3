@@ -18,7 +18,7 @@ export function Dashboard() {
   const { isAuthenticated, user } = useAuth();
   const { isPaired, pairData, loading: pairLoading } = usePairStatus();
   const { tasks, loading: tasksLoading } = useTasks();
-  const { rewards, loading: rewardsLoading } = useRewards();
+  const { data: rewards, isLoading: rewardsLoading } = useRewards();
   const [activeTab, setActiveTab] = useState<"tasks" | "rewards">("tasks");
   
   // Show authentication banner if not authenticated

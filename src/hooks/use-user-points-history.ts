@@ -34,20 +34,31 @@ export function useUserPointsHistory() {
       try {
         setLoading(true);
         
-        // Get user points history with related task/reward info
+        // Get user points history from the user_points table
         const { data, error } = await supabase
           .from('user_points')
           .select(`
             *,
-            task:tasks!inner(description),
-            reward:rewards!inner(description)
+            task:tasks(description),
+            reward:rewards(description)
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        setHistory(data || []);
+        // Process and validate the data to match our expected types
+        const typedData: PointsHistoryItem[] = (data || []).map(item => ({
+          id: item.id,
+          amount: item.amount,
+          source_type: item.source_type as 'task' | 'reward',
+          source_id: item.source_id,
+          created_at: item.created_at,
+          task: item.task,
+          reward: item.reward
+        }));
+        
+        setHistory(typedData);
       } catch (err: any) {
         console.error('Error fetching points history:', err);
         setError(err instanceof Error ? err : new Error(String(err)));

@@ -5,10 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 
+export type NotificationType = 'task_added' | 'task_completed' | 'reward_added' | 'reward_claimed';
+
 export interface Notification {
   id: string;
   message: string;
-  type: 'task_added' | 'task_completed' | 'reward_added' | 'reward_claimed';
+  type: NotificationType;
   related_id: string | null;
   is_read: boolean;
   created_at: string;
@@ -41,7 +43,11 @@ export function useNotifications() {
         
         if (error) throw error;
         
-        setNotifications(data || []);
+        // Type cast to ensure data matches our Notification type
+        setNotifications((data || []).map(item => ({
+          ...item,
+          type: item.type as NotificationType
+        })));
         setUnreadCount((data || []).filter(n => !n.is_read).length);
       } catch (err: any) {
         console.error('Error fetching notifications:', err);
@@ -63,7 +69,7 @@ export function useNotifications() {
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
         // Show toast notification for new notifications
-        const newNotification = payload.new as Notification;
+        const newNotification = payload.new as any;
         toast(newNotification.message, {
           position: "top-right"
         });
