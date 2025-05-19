@@ -38,7 +38,11 @@ export function useUserPointsHistory() {
         const { data, error } = await supabase
           .from('user_points')
           .select(`
-            *,
+            id,
+            amount,
+            source_type,
+            source_id,
+            created_at,
             task:tasks(description),
             reward:rewards(description)
           `)
@@ -48,15 +52,21 @@ export function useUserPointsHistory() {
         if (error) throw error;
         
         // Process and validate the data to match our expected types
-        const typedData: PointsHistoryItem[] = (data || []).map(item => ({
-          id: item.id,
-          amount: item.amount,
-          source_type: item.source_type as 'task' | 'reward',
-          source_id: item.source_id,
-          created_at: item.created_at,
-          task: item.task || null,
-          reward: item.reward || null
-        }));
+        const typedData: PointsHistoryItem[] = (data || []).map(item => {
+          // Check if task/reward exists and has the expected structure
+          const taskData = item.task && !item.task.error ? item.task : null;
+          const rewardData = item.reward && !item.reward.error ? item.reward : null;
+          
+          return {
+            id: item.id,
+            amount: item.amount,
+            source_type: item.source_type as 'task' | 'reward',
+            source_id: item.source_id,
+            created_at: item.created_at,
+            task: taskData,
+            reward: rewardData
+          };
+        });
         
         setHistory(typedData);
       } catch (err: any) {
