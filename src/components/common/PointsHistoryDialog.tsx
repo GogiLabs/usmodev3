@@ -68,7 +68,7 @@ export function PointsHistoryDialog() {
                     <div key={item.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.task?.description || "Task"}</p>
+                        <p className="font-medium truncate">{item.task ? item.task.description : "Task"}</p>
                         <div className="text-xs text-muted-foreground">
                           <span>{formatDate(item.created_at)}</span>
                         </div>
@@ -99,7 +99,7 @@ export function PointsHistoryDialog() {
                     <div key={item.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
                       <ShoppingBag className="h-5 w-5 text-amber-500 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.reward?.description || "Reward"}</p>
+                        <p className="font-medium truncate">{item.reward ? item.reward.description : "Reward"}</p>
                         <div className="text-xs text-muted-foreground">
                           <span>{formatDate(item.created_at)}</span>
                         </div>
