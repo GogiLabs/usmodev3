@@ -56,16 +56,17 @@ export function useUserPointsHistory() {
           // For task data, ensure it matches our expected structure
           // For task data
           let taskData: { description: string } | null = null;
-          if (item.task && typeof item.task === 'object' && item.task.description) {
-            taskData = { description: item.task.description };
+          const taskDescription = item.task?.description;
+          if (typeof taskDescription === 'string') {
+            taskData = { description: taskDescription };
           }
 
           // For reward data, ensure it matches our expected structure
           // For reward data
           let rewardData: { description: string } | null = null;
-          const taskDescription = item.task?.description;
-          if (typeof taskDescription === 'string') {
-            taskData = { description: taskDescription };
+          const rewardDescription = item.reward?.description;
+          if (typeof rewardDescription === 'string') {
+            rewardData = { description: rewardDescription };
           }
           
           return {
