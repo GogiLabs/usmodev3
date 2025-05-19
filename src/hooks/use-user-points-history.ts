@@ -58,28 +58,20 @@ export function useUserPointsHistory() {
         
         // Process and validate the data to match our expected types
         const typedData: PointsHistoryItem[] = (data || []).map(item => {
-          // Initialize task and reward as undefined
+          const task = item.task as { description?: string } | null;
+          const reward = item.reward as { description?: string } | null;
+        
           let taskData: { description: string } | null = null;
           let rewardData: { description: string } | null = null;
-
-          // For task data, check if it exists and isn't an error
-          if (typeof item.task === 'object' && !hasErrorProperty(item.task) && item.task) {
-            // Safe to access description now
-            //const description = item.task.description;
-            if (typeof item.task.description === 'string') {
-              taskData = { description };
-            }
+        
+          if (task && typeof task === 'object' && task.description) {
+            taskData = { description: task.description };
           }
-
-          // For reward data, check if it exists and isn't an error
-          if (typeof item.reward === 'object' && !hasErrorProperty(item.reward) && item.reward) {
-            // Safe to access description now
-            const description = item.reward.description;
-            if (typeof description === 'string') {
-              rewardData = { description };
-            }
+        
+          if (reward && typeof reward === 'object' && reward.description) {
+            rewardData = { description: reward.description };
           }
-          
+        
           return {
             id: item.id,
             amount: item.amount,
@@ -90,6 +82,7 @@ export function useUserPointsHistory() {
             reward: rewardData
           };
         });
+
         
         setHistory(typedData);
       } catch (err: any) {
