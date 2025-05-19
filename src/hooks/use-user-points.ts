@@ -14,7 +14,8 @@ export function useUserPoints() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
-
+  const initialized = useRef(false);
+  
   useEffect(() => {
     if (!user) {
       setPoints(null);
@@ -32,17 +33,24 @@ export function useUserPoints() {
         
         if (error) throw error;
         
-        // Result from RPC function is an array with one row
-        if (data && data.length > 0) {
-          setPoints(data[0]);
-        } else {
-          // If no data, set default values
-          setPoints({
-            earned_points: 0,
-            spent_points: 0,
-            available_points: 0
-          });
-        }
+        const newPoints: UserPoints = data && data.length > 0 ? data[0] : {
+          earned_points: 0,
+          spent_points: 0,
+          available_points: 0
+        };
+    
+        // Prevent initial animation trigger
+        setPoints(prev => {
+          if (!initialized.current) {
+            initialized.current = true;
+            return newPoints;
+          }
+          // If points changed, trigger re-render
+          if (JSON.stringify(prev) !== JSON.stringify(newPoints)) {
+            return newPoints;
+          }
+          return prev;
+        });
       } catch (err: any) {
         console.error('Error fetching user points:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
