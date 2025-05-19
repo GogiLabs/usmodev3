@@ -55,18 +55,24 @@ export function useUserPointsHistory() {
         const typedData: PointsHistoryItem[] = (data || []).map(item => {
           // For task data, ensure it matches our expected structure
           let taskData = null;
-          if (item.task && typeof item.task === 'object' && !('error' in item.task)) {
-            taskData = {
-              description: item.task.description || 'Unknown task'
-            };
+          if (item.task && typeof item.task === 'object') {
+            // Explicitly check if 'error' property doesn't exist in the task object
+            if (!('error' in item.task) && item.task.description) {
+              taskData = {
+                description: item.task.description
+              };
+            }
           }
 
           // For reward data, ensure it matches our expected structure
           let rewardData = null;
-          if (item.reward && typeof item.reward === 'object' && !('error' in item.reward)) {
-            rewardData = {
-              description: item.reward.description || 'Unknown reward'
-            };
+          if (item.reward && typeof item.reward === 'object') {
+            // Explicitly check if 'error' property doesn't exist in the reward object
+            if (!('error' in item.reward) && item.reward.description) {
+              rewardData = {
+                description: item.reward.description
+              };
+            }
           }
           
           return {
