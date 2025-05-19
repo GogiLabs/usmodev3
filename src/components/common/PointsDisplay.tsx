@@ -1,20 +1,12 @@
 
-import { useTask } from "@/contexts/task/TaskContext";
-import { useReward } from "@/contexts/reward/RewardContext";
+import { useUserPoints } from "@/hooks/use-user-points";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { usePair, usePairPoints } from "@/hooks/use-supabase-data";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
@@ -25,8 +17,7 @@ interface PointsDisplayProps {
 }
 
 export function PointsDisplay({ className }: PointsDisplayProps) {
-  const { earnedPoints: localEarnedPoints, loadingTasks } = useTask();
-  const { spentPoints: localSpentPoints, loadingRewards } = useReward();
+  const { points, loading } = useUserPoints();
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastPoints, setLastPoints] = useState<number | null>(null);
   const [pointDelta, setPointDelta] = useState<number>(0);
@@ -34,15 +25,11 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const [animationTriggeredAt, setAnimationTriggeredAt] = useState<number | null>(null);
   
   const { isAuthenticated } = useAuth();
-  const { data: pair } = usePair();
-  const { data: pairPoints, isLoading: pairPointsLoading } = usePairPoints(pair?.id);
 
-  const loading = (isAuthenticated && (loadingTasks || loadingRewards || pairPointsLoading));
-
-  // Calculate points based on whether we're using local storage or Supabase
-  const earnedPoints = isAuthenticated && pairPoints ? pairPoints.total_earned : localEarnedPoints;
-  const spentPoints = isAuthenticated && pairPoints ? pairPoints.total_spent : localSpentPoints;
-  const availablePoints = isAuthenticated && pairPoints ? pairPoints.available : (localEarnedPoints - localSpentPoints);
+  // Calculate available points (safely handle case where points might be null)
+  const earnedPoints = points?.earned_points || 0;
+  const spentPoints = points?.spent_points || 0;
+  const availablePoints = points?.available_points || 0;
   
   // Detect changes to trigger animation
   useEffect(() => {
@@ -177,7 +164,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
       
       <HoverCardContent className="w-64 p-4 shadow-lg">
         <div className="space-y-4">
-          <h4 className="text-sm font-semibold">Points Breakdown</h4>
+          <h4 className="text-sm font-semibold">My Points</h4>
           
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex items-center gap-1.5">
@@ -208,7 +195,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
           
           {isAuthenticated && (
             <div className="text-xs text-muted-foreground mt-2">
-              Points are synchronized between connected accounts.
+              Points are earned individually when you complete tasks.
             </div>
           )}
         </div>

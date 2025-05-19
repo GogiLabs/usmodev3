@@ -11,58 +11,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTask } from "@/contexts/task/TaskContext";
-import { useReward } from "@/contexts/reward/RewardContext";
 import { format, isToday, isYesterday } from "date-fns";
 import { Award, CheckCircle, ShoppingBag } from "lucide-react";
-import { Task } from "@/types/Task";
-import { Reward } from "@/types/Reward";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { usePairDetails } from "@/hooks/use-supabase-data";
+import { useUserPointsHistory, PointsHistoryItem } from "@/hooks/use-user-points-history";
 
 export function PointsHistoryDialog() {
   const [open, setOpen] = useState(false);
-  const { tasks, loadingTasks } = useTask();
-  const { rewards, loadingRewards } = useReward();
-  const { data: pairDetails } = usePairDetails();
+  const { history, loading } = useUserPointsHistory();
   
-  const formatDate = (date: Date) => {
-    if (isToday(date)) {
-      return `Today, ${format(date, 'h:mm a')}`;
-    } else if (isYesterday(date)) {
-      return `Yesterday, ${format(date, 'h:mm a')}`;
+  const formatDate = (date: string) => {
+    const dateObj = new Date(date);
+    if (isToday(dateObj)) {
+      return `Today, ${format(dateObj, 'h:mm a')}`;
+    } else if (isYesterday(dateObj)) {
+      return `Yesterday, ${format(dateObj, 'h:mm a')}`;
     } else {
-      return format(date, 'MMM d, yyyy');
+      return format(dateObj, 'MMM d, yyyy');
     }
   };
   
-  const getCompletedBy = (userId?: string) => {
-    if (!userId || !pairDetails) return "Unknown";
-    
-    if (userId === pairDetails.user_1_id) {
-      return pairDetails.user_1_name || "Partner 1";
-    } else if (userId === pairDetails.user_2_id) {
-      return pairDetails.user_2_name || "Partner 2";
-    }
-    
-    return "Unknown";
-  };
-  
-  // Filter completed tasks and sort by completion date
-  const completedTasks = tasks
-    .filter((task): task is Task & { completedAt: Date } => 
-      task.completed && !!task.completedAt
-    )
-    .sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
-  
-  // Filter claimed rewards and sort by claim date
-  const claimedRewards = rewards
-    .filter((reward): reward is Reward & { claimedAt: Date } => 
-      reward.claimed && !!reward.claimedAt
-    )
-    .sort((a, b) => b.claimedAt.getTime() - a.claimedAt.getTime());
-    
-  const loading = loadingTasks || loadingRewards;
+  // Filter points by source
+  const taskPoints = history.filter(item => item.source_type === 'task');
+  const rewardPoints = history.filter(item => item.source_type === 'reward');
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -73,7 +44,7 @@ export function PointsHistoryDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Points History</DialogTitle>
+          <DialogTitle>My Points History</DialogTitle>
           <DialogDescription>
             See how you've earned and spent your points
           </DialogDescription>
@@ -88,24 +59,21 @@ export function PointsHistoryDialog() {
           <TabsContent value="earned">
             {loading ? (
               <div className="flex justify-center py-8">
-                <LoadingSpinner text="Loading completed tasks..." />
+                <LoadingSpinner text="Loading points history..." />
               </div>
-            ) : completedTasks.length > 0 ? (
+            ) : taskPoints.length > 0 ? (
               <ScrollArea className="h-[300px] rounded-md border p-2">
                 <div className="space-y-3">
-                  {completedTasks.map((task) => (
-                    <div key={task.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
+                  {taskPoints.map((item) => (
+                    <div key={item.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{task.description}</p>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{formatDate(task.completedAt)}</span>
-                          {task.completedBy && (
-                            <span>by {getCompletedBy(task.completedBy)}</span>
-                          )}
+                        <p className="font-medium truncate">{item.task?.description || "Task"}</p>
+                        <div className="text-xs text-muted-foreground">
+                          <span>{formatDate(item.created_at)}</span>
                         </div>
                       </div>
-                      <span className="text-green-600 font-semibold">+{task.points}</span>
+                      <span className="text-green-600 font-semibold">+{item.amount}</span>
                     </div>
                   ))}
                 </div>
@@ -113,7 +81,8 @@ export function PointsHistoryDialog() {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Award className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                <p>No completed tasks yet</p>
+                <p>No points earned yet</p>
+                <p className="text-xs mt-1">Complete tasks to earn points</p>
               </div>
             )}
           </TabsContent>
@@ -121,24 +90,21 @@ export function PointsHistoryDialog() {
           <TabsContent value="spent">
             {loading ? (
               <div className="flex justify-center py-8">
-                <LoadingSpinner text="Loading claimed rewards..." />
+                <LoadingSpinner text="Loading points history..." />
               </div>
-            ) : claimedRewards.length > 0 ? (
+            ) : rewardPoints.length > 0 ? (
               <ScrollArea className="h-[300px] rounded-md border p-2">
                 <div className="space-y-3">
-                  {claimedRewards.map((reward) => (
-                    <div key={reward.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
+                  {rewardPoints.map((item) => (
+                    <div key={item.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
                       <ShoppingBag className="h-5 w-5 text-amber-500 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{reward.description}</p>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{formatDate(reward.claimedAt)}</span>
-                          {reward.claimedBy && (
-                            <span>by {getCompletedBy(reward.claimedBy)}</span>
-                          )}
+                        <p className="font-medium truncate">{item.reward?.description || "Reward"}</p>
+                        <div className="text-xs text-muted-foreground">
+                          <span>{formatDate(item.created_at)}</span>
                         </div>
                       </div>
-                      <span className="text-red-600 font-semibold">-{reward.pointCost}</span>
+                      <span className="text-red-600 font-semibold">{item.amount}</span>
                     </div>
                   ))}
                 </div>
@@ -146,7 +112,8 @@ export function PointsHistoryDialog() {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <ShoppingBag className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                <p>No claimed rewards yet</p>
+                <p>No points spent yet</p>
+                <p className="text-xs mt-1">Claim rewards to use your points</p>
               </div>
             )}
           </TabsContent>

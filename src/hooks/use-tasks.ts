@@ -64,21 +64,22 @@ export function useTasks() {
     
     fetchTasks();
     
-    // Set up realtime subscription
-    const subscription = supabase
+    // Set up realtime subscription with improved filtering
+    const channel = supabase
       .channel('tasks_changes')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'tasks',
         filter: isPaired && pairData ? `pair_id=eq.${pairData.pair_id}` : undefined
-      }, () => {
-        fetchTasks();
+      }, (payload) => {
+        console.log('Tasks real-time update received:', payload);
+        fetchTasks(); // Refresh the tasks immediately
       })
       .subscribe();
     
     return () => {
-      subscription.unsubscribe();
+      channel.unsubscribe();
     };
   }, [user, isPaired, pairData]);
   

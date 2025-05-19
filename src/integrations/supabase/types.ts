@@ -70,6 +70,36 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          related_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          related_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          related_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pairs: {
         Row: {
           created_at: string
@@ -258,6 +288,33 @@ export type Database = {
           },
         ]
       }
+      user_points: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          source_id: string
+          source_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          source_id: string
+          source_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          source_id?: string
+          source_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       pair_details: {
@@ -288,6 +345,15 @@ export type Database = {
           },
         ]
       }
+      user_points_summary: {
+        Row: {
+          available_points: number | null
+          earned_points: number | null
+          spent_points: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_invite_rate_limit: {
@@ -304,6 +370,14 @@ export type Database = {
           total_earned: number
           total_spent: number
           available: number
+        }[]
+      }
+      get_user_points: {
+        Args: { user_id_param: string }
+        Returns: {
+          earned_points: number
+          spent_points: number
+          available_points: number
         }[]
       }
       is_pair_member: {

@@ -2,9 +2,9 @@
 import { useState, useCallback } from 'react';
 import { Task } from '@/types/Task';
 import { useAuth } from '../AuthContext';
-import { useTasks } from '@/hooks/use-supabase-data';
+import { useTasks } from '@/hooks/use-tasks';
 import { useTaskService, mapDbTaskToAppTask } from '@/services/taskService';
-import { usePair, usePairPoints } from '@/hooks/use-supabase-data';
+import { usePair } from '@/hooks/use-supabase-data';
 import { useToast } from '@/components/ui/use-toast';
 import { toast as sonnerToast } from 'sonner';
 
@@ -16,7 +16,6 @@ export const useTaskOperations = () => {
   const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
   const { data: pair } = usePair();
   const { data: dbTasks, isLoading: dbTasksLoading, error: dbTasksError, refetch: refetchDbTasks } = useTasks(pair?.id);
-  const { data: pairPoints, refetch: refetchPairPoints } = usePairPoints(pair?.id);
   const taskService = useTaskService(pair?.id);
   const { toast } = useToast();
 
@@ -26,9 +25,8 @@ export const useTaskOperations = () => {
     setRetryCount(prev => prev + 1);
     if (pair?.id) {
       refetchDbTasks();
-      refetchPairPoints();
     }
-  }, [pair?.id, refetchDbTasks, refetchPairPoints]);
+  }, [pair?.id, refetchDbTasks]);
 
   // Handle network errors
   const handleNetworkError = useCallback((error: any) => {
@@ -71,8 +69,6 @@ export const useTaskOperations = () => {
           description: `"${task.description}" has been added`
         });
         
-        // Refresh points
-        refetchPairPoints();
         return createdTask;
       } catch (error: any) {
         console.error("❌ Error creating task:", error);
@@ -102,8 +98,6 @@ export const useTaskOperations = () => {
         const completedTask = await taskService.completeTask(id, user.id);
         console.log('✅ Task completed in database:', completedTask);
         
-        // Refresh pair points
-        refetchPairPoints();
         return completedTask;
       } catch (error: any) {
         console.error("❌ Error completing task:", error);
@@ -131,11 +125,6 @@ export const useTaskOperations = () => {
         await taskService.deleteTask(id);
         console.log('✅ Task deleted from database:', id);
         
-        // If the task was completed, refresh points
-        const taskWasCompleted = dbTasks?.some(task => task.id === id && task.completed);
-        if (taskWasCompleted) {
-          refetchPairPoints();
-        }
         return true;
       } catch (error: any) {
         console.error("❌ Error deleting task:", error);

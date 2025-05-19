@@ -2,14 +2,13 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
 import { Reward } from '@/types/Reward';
 import { useAuth } from '../AuthContext';
-import { useTask } from '../task/TaskContext';
 import { useToast } from '@/components/ui/use-toast';
-import { useRewards, usePair, usePairPoints } from '@/hooks/use-supabase-data';
+import { useRewards, usePair } from '@/hooks/use-supabase-data';
 import { useRewardService, mapDbRewardToAppReward } from '@/services/rewardService';
-import { useOptimisticUpdate } from '@/hooks/use-optimistic-update';
 import { toast as sonnerToast } from 'sonner';
-import { rewardReducer, RewardState, RewardAction } from './rewardReducer';
+import { rewardReducer, RewardState } from './rewardReducer';
 import { createRewardWithDefaults, initializeRewardState } from './rewardUtils';
+import { useUserPoints } from '@/hooks/use-user-points';
 
 // Define the context type
 interface RewardContextType {
@@ -33,12 +32,11 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
   const [retryCount, setRetryCount] = useState(0);
 
   const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
-  const { earnedPoints: localEarnedPoints } = useTask();
   const { toast } = useToast();
+  const { points } = useUserPoints();
   
   const { data: pair } = usePair();
   const { data: dbRewards, isLoading: dbRewardsLoading, error: dbRewardsError, refetch: refetchDbRewards } = useRewards(pair?.id);
-  const { data: pairPoints, refetch: refetchPairPoints } = usePairPoints(pair?.id);
   const rewardService = useRewardService(pair?.id);
 
   // Refetch rewards function
@@ -47,9 +45,8 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
     setRetryCount(prev => prev + 1);
     if (pair?.id) {
       refetchDbRewards();
-      refetchPairPoints();
     }
-  }, [pair?.id, refetchDbRewards, refetchPairPoints]);
+  }, [pair?.id, refetchDbRewards]);
 
   // Handle network errors
   useEffect(() => {
@@ -160,9 +157,7 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // Check if user has enough points
-    const availablePoints = isAuthenticated && pairPoints 
-      ? pairPoints.available 
-      : localEarnedPoints - state.spentPoints;
+    const availablePoints = points?.available_points || 0;
       
     if (reward.pointCost > availablePoints) {
       console.log(`⚠️ Not enough points to claim reward: needed ${reward.pointCost}, have ${availablePoints}`);
@@ -184,9 +179,6 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
         sonnerToast.success("Reward claimed!", {
           description: `You've claimed: ${reward.description}`,
         });
-        
-        // Refresh pair points
-        refetchPairPoints();
       } catch (error: any) {
         console.error("❌ Error claiming reward:", error);
         toast({
@@ -227,11 +219,6 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
             description: `"${rewardToDelete.description}" has been removed`
           });
         }
-        
-        // If the reward was claimed, refresh points
-        if (rewardToDelete?.claimed) {
-          refetchPairPoints();
-        }
       } catch (error: any) {
         console.error("❌ Error deleting reward:", error);
         toast({
@@ -248,10 +235,7 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const canClaimReward = (pointCost: number): boolean => {
-    const availablePoints = isAuthenticated && pairPoints 
-      ? pairPoints.available 
-      : localEarnedPoints - state.spentPoints;
-      
+    const availablePoints = points?.available_points || 0;      
     return availablePoints >= pointCost;
   };
 
