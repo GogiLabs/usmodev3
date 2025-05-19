@@ -37,18 +37,24 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   
   const { data: pair } = usePair();
-  const { data: dbRewards, isLoading: dbRewardsLoading, error: dbRewardsError } = useRewards(pair?.id);
-  const { data: pairPoints } = usePairPoints(pair?.id);
+  const { data: dbRewards, isLoading: dbRewardsLoading, error: dbRewardsError, refetch: refetchDbRewards } = useRewards(pair?.id);
+  const { data: pairPoints, refetch: refetchPairPoints } = usePairPoints(pair?.id);
   const rewardService = useRewardService(pair?.id);
 
   // Refetch rewards function
   const refetchRewards = useCallback(() => {
+    console.log('🔄 Manually refetching rewards');
     setRetryCount(prev => prev + 1);
-  }, []);
+    if (pair?.id) {
+      refetchDbRewards();
+      refetchPairPoints();
+    }
+  }, [pair?.id, refetchDbRewards, refetchPairPoints]);
 
   // Handle network errors
   useEffect(() => {
     if (dbRewardsError) {
+      console.error('❌ Reward fetch error:', dbRewardsError);
       setError(new Error(dbRewardsError.message || "Failed to load rewards"));
     } else {
       setError(null);
@@ -61,13 +67,15 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
       setLoadingRewards(true);
       
       try {
+        console.log(`📊 Syncing ${dbRewards.length} rewards from database`);
+        
         // Map DB rewards to app format
         const appRewards = dbRewards.map(mapDbRewardToAppReward);
         
         // Update local state with DB rewards
         dispatch({ type: 'SYNC_DB_REWARDS', payload: appRewards });
       } catch (err) {
-        console.error("Error syncing rewards:", err);
+        console.error("❌ Error syncing rewards:", err);
         setError(err instanceof Error ? err : new Error("Failed to process rewards data"));
       } finally {
         setLoadingRewards(false);
@@ -84,30 +92,23 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isAuthenticated, dbRewardsLoading, pair]);
 
-  // Setup optimistic updates
-  const { execute: executeAddReward } = useOptimisticUpdate(
-    async (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
-      if (!pair?.id) {
-        throw new Error("Cannot create reward: No pair ID");
-      }
-      return await rewardService.createReward(reward);
-    }
-  );
-
-  const { execute: executeClaimReward } = useOptimisticUpdate(
-    async (params: { rewardId: string, userId: string }) => {
-      return await rewardService.claimReward(params.rewardId, params.userId);
-    }
-  );
-
-  const { execute: executeDeleteReward } = useOptimisticUpdate(
-    async (rewardId: string) => {
-      await rewardService.deleteReward(rewardId);
-      return rewardId;
-    }
-  );
-
   const addReward = async (reward: Omit<Reward, 'id' | 'claimed' | 'createdAt' | 'claimedAt'>) => {
+    console.log('➕ Adding new reward:', reward);
+    
+    // Validate reward data
+    if (!reward.description.trim()) {
+      toast({
+        title: "Reward description required",
+        description: "Please enter a reward description",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (reward.pointCost < 1) {
+      reward.pointCost = 1;
+    }
+    
     // Create reward object with default values
     const newReward = createRewardWithDefaults(reward);
 
@@ -116,14 +117,16 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
 
     if (isAuthenticated && pair) {
       try {
-        await rewardService.createReward(reward);
+        console.log('🔄 Sending reward to database:', reward);
+        const createdReward = await rewardService.createReward(reward);
+        console.log('✅ Reward created in database:', createdReward);
+        
         // Success toast
         sonnerToast.success("Reward added", {
           description: `"${reward.description}" has been added`
         });
-        // Rewards will be updated via the useRewards hook's realtime subscription
       } catch (error: any) {
-        console.error("Error creating reward:", error);
+        console.error("❌ Error creating reward:", error);
         toast({
           title: "Error creating reward",
           description: error.message,
@@ -138,13 +141,23 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const claimReward = async (id: string) => {
+    console.log('🎁 Claiming reward:', id);
+    
     if (!isAuthenticated) {
       showAuthRequiredToast();
       return;
     }
     
     const reward = state.rewards.find(r => r.id === id);
-    if (!reward) return;
+    if (!reward) {
+      console.error(`❌ Reward with ID ${id} not found`);
+      return;
+    }
+    
+    if (reward.claimed) {
+      console.log('⚠️ Reward already claimed:', id);
+      return;
+    }
     
     // Check if user has enough points
     const availablePoints = isAuthenticated && pairPoints 
@@ -152,6 +165,7 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
       : localEarnedPoints - state.spentPoints;
       
     if (reward.pointCost > availablePoints) {
+      console.log(`⚠️ Not enough points to claim reward: needed ${reward.pointCost}, have ${availablePoints}`);
       sonnerToast.error("Not enough points", {
         description: `You need ${reward.pointCost - availablePoints} more points to claim this reward.`,
       });
@@ -163,14 +177,18 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
     
     if (isAuthenticated && user && pair) {
       try {
-        await rewardService.claimReward(id, user.id);
+        console.log('🔄 Marking reward as claimed in database:', id);
+        const claimedReward = await rewardService.claimReward(id, user.id);
+        console.log('✅ Reward claimed in database:', claimedReward);
         
         sonnerToast.success("Reward claimed!", {
           description: `You've claimed: ${reward.description}`,
         });
-        // Rewards will be updated via the useRewards hook's realtime subscription
+        
+        // Refresh pair points
+        refetchPairPoints();
       } catch (error: any) {
-        console.error("Error claiming reward:", error);
+        console.error("❌ Error claiming reward:", error);
         toast({
           title: "Error claiming reward",
           description: error.message,
@@ -185,6 +203,8 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteReward = async (id: string) => {
+    console.log('🗑️ Deleting reward:', id);
+    
     if (!isAuthenticated) {
       showAuthRequiredToast();
       return;
@@ -198,16 +218,22 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
     
     if (isAuthenticated && pair) {
       try {
+        console.log('🔄 Deleting reward from database:', id);
         await rewardService.deleteReward(id);
+        console.log('✅ Reward deleted from database:', id);
         
         if (rewardToDelete) {
           sonnerToast.success("Reward deleted", {
             description: `"${rewardToDelete.description}" has been removed`
           });
         }
-        // Rewards will be updated via the useRewards hook's realtime subscription
+        
+        // If the reward was claimed, refresh points
+        if (rewardToDelete?.claimed) {
+          refetchPairPoints();
+        }
       } catch (error: any) {
-        console.error("Error deleting reward:", error);
+        console.error("❌ Error deleting reward:", error);
         toast({
           title: "Error deleting reward",
           description: error.message,

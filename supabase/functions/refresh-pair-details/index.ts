@@ -55,14 +55,69 @@ serve(async (req) => {
     }
 
     // Force refresh of the pair_details view by making a direct query to it
+    // Use order by id to prevent the PGRST109 error
     const { data: refreshData, error: refreshError } = await supabaseClient
       .from('pair_details')
       .select('*')
       .eq('pair_id', pairId)
+      .order('pair_id')
       .maybeSingle();
 
     if (refreshError) {
       throw refreshError;
+    }
+
+    // Now check if we need to update the pair_details manually
+    if (!refreshData) {
+      // Manually construct the pair details since the view might be delayed
+      const { data: user1Data, error: user1Error } = await supabaseClient
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('id', pairData.user_1_id)
+        .single();
+        
+      if (user1Error) {
+        console.error("Error fetching user 1 profile:", user1Error);
+      }
+      
+      let user2Data = null;
+      if (pairData.user_2_id) {
+        const { data: user2Result, error: user2Error } = await supabaseClient
+          .from('profiles')
+          .select('display_name, avatar_url')
+          .eq('id', pairData.user_2_id)
+          .single();
+          
+        if (user2Error) {
+          console.error("Error fetching user 2 profile:", user2Error);
+        } else {
+          user2Data = user2Result;
+        }
+      }
+      
+      // Construct the response manually
+      const manualPairDetails = {
+        pair_id: pairData.id,
+        user_1_id: pairData.user_1_id,
+        user_2_id: pairData.user_2_id,
+        user_1_name: user1Data?.display_name || null,
+        user_1_avatar: user1Data?.avatar_url || null,
+        user_2_name: user2Data?.display_name || null,
+        user_2_avatar: user2Data?.avatar_url || null,
+        created_at: pairData.created_at
+      };
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Pair details manually constructed",
+          data: manualPairDetails
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     }
 
     return new Response(

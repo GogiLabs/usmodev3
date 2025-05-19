@@ -30,6 +30,8 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastPoints, setLastPoints] = useState<number | null>(null);
   const [pointDelta, setPointDelta] = useState<number>(0);
+  const [showDelta, setShowDelta] = useState(false);
+  const [animationTriggeredAt, setAnimationTriggeredAt] = useState<number | null>(null);
   
   const { isAuthenticated } = useAuth();
   const { data: pair } = usePair();
@@ -44,22 +46,36 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   
   // Detect changes to trigger animation
   useEffect(() => {
-    if (loading) return;
-    
-    if (lastPoints !== null && availablePoints !== lastPoints) {
-      // Calculate the delta
-      const delta = availablePoints - lastPoints;
-      setPointDelta(delta);
-      
-      // Trigger animation
-      setIsAnimating(true);
-      const timer = setTimeout(() => setIsAnimating(false), 1500);
-      
-      return () => clearTimeout(timer);
+    if (loading || lastPoints === null || availablePoints === lastPoints) {
+      setLastPoints(availablePoints);
+      return;
     }
     
+    // Calculate the delta
+    const delta = availablePoints - lastPoints;
+    const now = Date.now();
+    
+    // If we're already animating and it's been less than 2 seconds, aggregate the deltas
+    if (isAnimating && animationTriggeredAt && now - animationTriggeredAt < 2000) {
+      setPointDelta(prev => prev + delta);
+    } else {
+      setPointDelta(delta);
+      setIsAnimating(true);
+      setAnimationTriggeredAt(now);
+    }
+    
+    setShowDelta(true);
     setLastPoints(availablePoints);
-  }, [availablePoints, lastPoints, loading]);
+    
+    // Clear animations after delay
+    const hideTimer = setTimeout(() => setShowDelta(false), 1500);
+    const animTimer = setTimeout(() => setIsAnimating(false), 1800);
+    
+    return () => {
+      clearTimeout(hideTimer);
+      clearTimeout(animTimer);
+    };
+  }, [availablePoints, lastPoints, loading, isAnimating, animationTriggeredAt]);
 
   if (loading) {
     return (
@@ -75,16 +91,16 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
 
   return (
     <HoverCard openDelay={300} closeDelay={100}>
-      <HoverCardTrigger>
+      <HoverCardTrigger asChild>
         <motion.div 
           className={cn(
-            "flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 px-4 py-2 rounded-full shadow-sm transition-all duration-300",
-            isAnimating && "from-pink-200 to-purple-200",
+            "flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 px-4 py-2 rounded-full shadow-sm transition-all duration-300 cursor-pointer select-none",
+            isAnimating && "from-pink-200 to-purple-200 shadow-md",
             className
           )}
           initial={{ scale: 1 }}
-          animate={isAnimating ? { scale: 1.1 } : { scale: 1 }}
-          transition={{ duration: 0.3 }}
+          animate={isAnimating ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+          transition={{ duration: 0.5 }}
         >
           <div className="relative">
             <AnimatePresence>
@@ -92,7 +108,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1.2 }}
-                  exit={{ scale: 0 }}
+                  exit={{ scale: 0, opacity: 0 }}
                   className="absolute -top-1 -right-1"
                 >
                   <Sparkles className="h-4 w-4 text-accent" />
@@ -104,13 +120,16 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
               animate={isAnimating ? { scale: [1, 1.3, 1] } : {}}
               transition={{ duration: 0.5 }}
             >
-              <Heart className="h-5 w-5 text-primary" />
+              <Heart className={cn(
+                "h-5 w-5 text-primary transition-all", 
+                isAnimating && "text-rose-500"
+              )} />
             </motion.div>
           </div>
           
           <div className="text-sm font-medium flex items-center gap-1 relative">
             <AnimatePresence>
-              {isAnimating && pointDelta !== 0 && (
+              {showDelta && pointDelta !== 0 && (
                 <motion.span 
                   className={cn(
                     "absolute -top-5 right-0 text-sm font-bold",
@@ -127,49 +146,71 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
             </AnimatePresence>
               
             <motion.span
-              className="text-primary"
-              animate={isAnimating ? { scale: [1, 1.2, 1] } : {}}
-              transition={{ duration: 0.5 }}
+              className={cn(
+                "text-primary font-semibold transition-all",
+                isAnimating && "text-rose-500"
+              )}
+              animate={isAnimating ? { 
+                scale: [1, 1.2, 1],
+                color: ['#9b87f5', '#ec4899', '#9b87f5']
+              } : {}}
+              transition={{ duration: 0.8 }}
             >
               {availablePoints}
             </motion.span>
             
-            <Star className={cn(
-              "h-3 w-3 text-primary",
-              isAnimating && "animate-spin-slow"
-            )} 
-            fill={isAnimating ? "currentColor" : "none"} />
+            <motion.div
+              animate={isAnimating ? { rotate: [0, 360] } : {}}
+              transition={{ duration: 0.8 }}
+            >
+              <Star className={cn(
+                "h-3 w-3 text-primary",
+                isAnimating && "text-yellow-500"
+              )} 
+              fill={isAnimating ? "currentColor" : "none"} />
+            </motion.div>
             
             <span className="text-muted-foreground">points</span>
           </div>
         </motion.div>
       </HoverCardTrigger>
       
-      <HoverCardContent className="w-64">
-        <div className="space-y-2">
+      <HoverCardContent className="w-64 p-4 shadow-lg">
+        <div className="space-y-4">
           <h4 className="text-sm font-semibold">Points Breakdown</h4>
           
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Award className="h-4 w-4 text-green-600" />
               <span>Earned</span>
             </div>
-            <span className="text-right font-medium">{earnedPoints} points</span>
+            <span className="text-right font-medium text-green-600">{earnedPoints} points</span>
             
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Award className="h-4 w-4 text-red-600" />
               <span>Spent</span>
             </div>
-            <span className="text-right font-medium">{spentPoints} points</span>
+            <span className="text-right font-medium text-red-600">{spentPoints} points</span>
             
             <div className="col-span-2 h-px bg-border my-1"></div>
             
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Heart className="h-4 w-4 text-primary" />
               <span>Available</span>
             </div>
-            <span className="text-right font-medium text-primary">{availablePoints} points</span>
+            <span className={cn(
+              "text-right font-medium",
+              availablePoints > 10 ? "text-primary" : availablePoints > 0 ? "text-amber-500" : "text-red-500" 
+            )}>
+              {availablePoints} points
+            </span>
           </div>
+          
+          {isAuthenticated && (
+            <div className="text-xs text-muted-foreground mt-2">
+              Points are synchronized between connected accounts.
+            </div>
+          )}
         </div>
       </HoverCardContent>
     </HoverCard>

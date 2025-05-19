@@ -4,7 +4,7 @@ import { Task, TaskTag } from '@/types/Task';
 import { useAuth } from '../AuthContext';
 import { useTasks } from '@/hooks/use-supabase-data';
 import { useTaskService, mapDbTaskToAppTask } from '@/services/taskService';
-import { usePair } from '@/hooks/use-supabase-data';
+import { usePair, usePairPoints } from '@/hooks/use-supabase-data';
 import { useToast } from '@/components/ui/use-toast';
 import { useOptimisticUpdate } from '@/hooks/use-optimistic-update';
 import { toast as sonnerToast } from 'sonner';
@@ -35,18 +35,25 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
   const { data: pair } = usePair();
-  const { data: dbTasks, isLoading: dbTasksLoading, error: dbTasksError } = useTasks(pair?.id);
+  const { data: dbTasks, isLoading: dbTasksLoading, error: dbTasksError, refetch: refetchDbTasks } = useTasks(pair?.id);
+  const { data: pairPoints, refetch: refetchPairPoints } = usePairPoints(pair?.id);
   const taskService = useTaskService(pair?.id);
   const { toast } = useToast();
 
   // Refetch tasks function
   const refetchTasks = useCallback(() => {
+    console.log('🔄 Manually refetching tasks');
     setRetryCount(prev => prev + 1);
-  }, []);
+    if (pair?.id) {
+      refetchDbTasks();
+      refetchPairPoints();
+    }
+  }, [pair?.id, refetchDbTasks, refetchPairPoints]);
 
   // Handle network errors
   useEffect(() => {
     if (dbTasksError) {
+      console.error('❌ Task fetch error:', dbTasksError);
       setError(new Error(dbTasksError.message || "Failed to load tasks"));
       setNetworkError(dbTasksError);
     } else {
@@ -61,13 +68,15 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       setLoadingTasks(true);
       
       try {
+        console.log(`📊 Syncing ${dbTasks.length} tasks from database`);
+        
         // Map DB tasks to app format
         const appTasks = dbTasks.map(mapDbTaskToAppTask);
         
         // Update local state with DB tasks
         dispatch({ type: 'SYNC_DB_TASKS', payload: appTasks });
       } catch (err) {
-        console.error("Error syncing tasks:", err);
+        console.error("❌ Error syncing tasks:", err);
         setError(err instanceof Error ? err : new Error("Failed to process tasks data"));
       } finally {
         setLoadingTasks(false);
@@ -84,30 +93,23 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isAuthenticated, dbTasksLoading, pair]);
 
-  // Setup optimistic updates
-  const { execute: executeAddTask } = useOptimisticUpdate(
-    async (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => {
-      if (!pair) {
-        throw new Error("Cannot create task: No pair ID");
-      }
-      return await taskService.createTask(task);
-    }
-  );
-
-  const { execute: executeCompleteTask } = useOptimisticUpdate(
-    async (params: { taskId: string, userId: string }) => {
-      return await taskService.completeTask(params.taskId, params.userId);
-    }
-  );
-
-  const { execute: executeDeleteTask } = useOptimisticUpdate(
-    async (taskId: string) => {
-      await taskService.deleteTask(taskId);
-      return taskId;
-    }
-  );
-
   const addTask = async (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => {
+    console.log('➕ Adding new task:', task);
+    
+    // Validate task data
+    if (!task.description.trim()) {
+      toast({
+        title: "Task description required",
+        description: "Please enter a task description",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (task.points < 1) {
+      task.points = 1;
+    }
+    
     // Create task object with default values
     const newTask = createTaskWithDefaults(task);
 
@@ -116,14 +118,19 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
     if (isAuthenticated && pair) {
       try {
-        await taskService.createTask(task);
+        console.log('🔄 Sending task to database:', task);
+        const createdTask = await taskService.createTask(task);
+        console.log('✅ Task created in database:', createdTask);
+        
         // Success toast
         sonnerToast.success("Task added", {
           description: `"${task.description}" has been added`
         });
-        // Tasks will be updated via the useTasks hook's realtime subscription
+        
+        // Refresh points
+        refetchPairPoints();
       } catch (error: any) {
-        console.error("Error creating task:", error);
+        console.error("❌ Error creating task:", error);
         toast({
           title: "Error creating task",
           description: error.message,
@@ -138,24 +145,38 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const completeTask = async (id: string) => {
+    console.log('✓ Completing task:', id);
+    
+    // Find the task to be completed
+    const taskToComplete = state.tasks.find(t => t.id === id);
+    if (!taskToComplete) {
+      console.error(`❌ Task with ID ${id} not found`);
+      return;
+    }
+    
+    if (taskToComplete.completed) {
+      console.log('⚠️ Task already completed:', id);
+      return;
+    }
+
     if (isAuthenticated && user && pair) {
       // Optimistically update UI
       dispatch({ type: 'COMPLETE_TASK', payload: { id, userId: user.id } });
       
       try {
-        const completedTask = state.tasks.find(t => t.id === id);
-        
-        await taskService.completeTask(id, user.id);
+        console.log('🔄 Marking task as completed in database:', id);
+        const completedTask = await taskService.completeTask(id, user.id);
+        console.log('✅ Task completed in database:', completedTask);
         
         // Success animation and toast
-        if (completedTask) {
-          sonnerToast.success(`+${completedTask.points} points earned!`, {
-            description: `"${completedTask.description}" completed`
-          });
-        }
-        // Tasks will be updated via the useTasks hook's realtime subscription
+        sonnerToast.success(`+${taskToComplete.points} points earned!`, {
+          description: `"${taskToComplete.description}" completed`
+        });
+        
+        // Refresh pair points
+        refetchPairPoints();
       } catch (error: any) {
-        console.error("Error completing task:", error);
+        console.error("❌ Error completing task:", error);
         toast({
           title: "Error completing task",
           description: error.message,
@@ -169,17 +190,16 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         dispatch({ type: 'COMPLETE_TASK', payload: { id } });
         
         // Find the completed task to show point value
-        const completedTask = state.tasks.find(t => t.id === id);
-        if (completedTask) {
-          sonnerToast.success(`+${completedTask.points} points earned!`, {
-            description: `"${completedTask.description}" completed`
-          });
-        }
+        sonnerToast.success(`+${taskToComplete.points} points earned!`, {
+          description: `"${taskToComplete.description}" completed`
+        });
       }
     }
   };
 
   const deleteTask = async (id: string) => {
+    console.log('🗑️ Deleting task:', id);
+    
     // Find the task to be deleted for showing in toast
     const taskToDelete = state.tasks.find(t => t.id === id);
     
@@ -188,16 +208,22 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     
     if (isAuthenticated && pair) {
       try {
+        console.log('🔄 Deleting task from database:', id);
         await taskService.deleteTask(id);
+        console.log('✅ Task deleted from database:', id);
         
         if (taskToDelete) {
           sonnerToast.success("Task deleted", {
             description: `"${taskToDelete.description}" has been removed`
           });
         }
-        // Tasks will be updated via the useTasks hook's realtime subscription
+        
+        // If the task was completed, refresh points
+        if (taskToDelete?.completed) {
+          refetchPairPoints();
+        }
       } catch (error: any) {
-        console.error("Error deleting task:", error);
+        console.error("❌ Error deleting task:", error);
         toast({
           title: "Error deleting task",
           description: error.message,

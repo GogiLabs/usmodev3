@@ -6,6 +6,18 @@ import { CheckCircle, Circle, Sparkles, Trash2, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface TaskItemProps {
   task: Task;
@@ -17,6 +29,7 @@ export function TaskItem({ task }: TaskItemProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const isMobile = useIsMobile();
   
   // Reset animation state when task changes
   useEffect(() => {
@@ -57,11 +70,156 @@ export function TaskItem({ task }: TaskItemProps) {
     }, 300);
   };
   
+  // Render for mobile devices
+  if (isMobile) {
+    return (
+      <div 
+        className={cn(
+          "flex flex-col p-4 border rounded-lg mb-3 transition-all duration-300",
+          task.completed ? 'bg-muted/50' : 'bg-white',
+          isAnimating && 'bg-primary/10 scale-[1.02]',
+          isDeleting && 'opacity-0 scale-95'
+        )}
+      >
+        {/* Task header row with complete button and delete button */}
+        <div className="flex items-center justify-between mb-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleComplete}
+            disabled={task.completed}
+            className={cn(
+              "p-2 h-auto",
+              task.completed ? "text-primary cursor-default" : "text-muted-foreground hover:text-primary",
+              isAnimating && "animate-pulse"
+            )}
+          >
+            <div className="relative">
+              {task.completed ? (
+                <CheckCircle className="h-5 w-5" />
+              ) : (
+                <Circle className="h-5 w-5" />
+              )}
+              {showConfetti && (
+                <span className="absolute -top-1 -right-1 animate-fade-in">
+                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                </span>
+              )}
+            </div>
+          </Button>
+          
+          {/* Mobile-friendly delete with confirmation */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive p-2 h-auto"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="max-w-[90vw]">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete "{task.description}"?
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex gap-2">
+                <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} 
+                  className="bg-destructive hover:bg-destructive/90">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+        
+        {/* Task content */}
+        <div className="px-1">
+          <div className={cn(
+            "text-sm font-medium mb-2",
+            task.completed ? "line-through text-muted-foreground" : "",
+            isAnimating && "text-primary"
+          )}>
+            {task.description}
+          </div>
+          
+          <div className="flex items-center flex-wrap gap-2 mt-1">
+            <span className={`text-xs px-2 py-0.5 rounded-full ${getTagColor(task.tag)}`}>
+              {task.tag}
+            </span>
+            <div className={cn(
+              "flex items-center text-xs px-2 py-0.5 rounded-full text-primary-foreground font-medium transition-all gap-1",
+              isAnimating ? "bg-primary scale-110" : "bg-primary/20"
+            )}>
+              <span>{task.points}</span>
+              <Star className="h-3 w-3" fill={isAnimating ? "currentColor" : "none"} />
+            </div>
+          </div>
+        </div>
+      
+        {/* Confetti effect */}
+        {showConfetti && (
+          <div className="confetti-container absolute">
+            {[...Array(15)].map((_, i) => {
+              const size = Math.random() * 8 + 5;
+              const left = Math.random() * 60;
+              const animationDelay = Math.random() * 0.5;
+              const backgroundColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
+
+              return (
+                <div
+                  key={i}
+                  className="confetti absolute"
+                  style={{
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    left: `${left}%`,
+                    backgroundColor,
+                    animationDelay: `${animationDelay}s`,
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        <style>
+          {`
+          .confetti-container {
+            pointer-events: none;
+          }
+          .confetti {
+            animation: confettiDrop 1s ease-out forwards;
+            border-radius: 50%;
+            opacity: 0.8;
+          }
+          @keyframes confettiDrop {
+            0% {
+              transform: translateY(-10px) rotate(0deg);
+              opacity: 1;
+            }
+            100% {
+              transform: translateY(60px) rotate(360deg);
+              opacity: 0;
+            }
+          }
+          `}
+        </style>
+      </div>
+    );
+  }
+  
+  // Desktop view
   return (
     <div 
       className={cn(
         "flex items-center justify-between p-4 border rounded-lg mb-2 transition-all duration-300",
-        task.completed ? 'bg-muted' : 'bg-white',
+        task.completed ? 'bg-muted/50' : 'bg-white',
         isAnimating && 'bg-primary/10 scale-[1.02]',
         isDeleting && 'opacity-0 scale-95'
       )}
@@ -113,14 +271,33 @@ export function TaskItem({ task }: TaskItemProps) {
         </div>
       </div>
       
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleDelete}
-        className="text-muted-foreground hover:text-destructive"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{task.description}"?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} 
+              className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       {/* Confetti effect */}
       {showConfetti && (
