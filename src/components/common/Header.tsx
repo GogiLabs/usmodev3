@@ -2,9 +2,6 @@
 import { PointsDisplay } from "./PointsDisplay";
 import { ProfileSettings } from "./ProfileSettings";
 import { useAuth } from "@/contexts/AuthContext";
-import { PairPrompt } from "./PairPrompt";
-import { PairedUserBanner } from "./PairedUserBanner";
-import { InviteHandler } from "./InviteHandler";
 import { NetworkStatusIndicator } from "./NetworkStatusIndicator";
 import { NotificationCenter } from "./NotificationCenter";
 
