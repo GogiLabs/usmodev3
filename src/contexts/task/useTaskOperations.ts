@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { Task } from '@/types/Task';
 import { useAuth } from '../AuthContext';
 import { useTasks } from '@/hooks/use-supabase-data';
-import { useTaskService } from '@/services/taskService';
+import { useTaskService, mapDbTaskToAppTask } from '@/services/taskService';
 import { usePair, usePairPoints } from '@/hooks/use-supabase-data';
 import { useToast } from '@/components/ui/use-toast';
 import { toast as sonnerToast } from 'sonner';

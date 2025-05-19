@@ -4,20 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePairStatus } from "@/hooks/use-pair-status";
 import { Task, TaskTag } from "@/types/Task";
-
-// Helper function to map database task to app task model
-const mapDbTaskToAppTask = (dbTask: any): Task => {
-  return {
-    id: dbTask.id,
-    description: dbTask.description,
-    points: dbTask.points,
-    tag: dbTask.tag as TaskTag,
-    completed: dbTask.completed,
-    createdAt: new Date(dbTask.created_at),
-    completedAt: dbTask.completed_at ? new Date(dbTask.completed_at) : undefined,
-    completedBy: dbTask.completed_by,
-  };
-};
+import { mapDbTaskToAppTask } from "@/services/taskService";
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -65,7 +52,7 @@ export function useTasks() {
         
         if (error) throw error;
         
-        // Transform database tasks to app tasks
+        // Transform database tasks to app tasks using our mapping function
         setTasks((data || []).map(mapDbTaskToAppTask));
       } catch (err: any) {
         console.error('Error fetching tasks:', err);

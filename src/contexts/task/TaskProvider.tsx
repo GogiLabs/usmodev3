@@ -7,6 +7,20 @@ import { taskReducer } from './taskReducer';
 import { getTagColor, createTaskWithDefaults, initializeTaskState } from './taskUtils';
 import { showTaskAddedToast, showTaskCompletedToast, showTaskDeletedToast } from './TaskNotifications';
 
+// Helper function to map database tasks to our Task interface
+const mapDbTasksToAppTasks = (dbTasks: any[]): Task[] => {
+  return dbTasks.map(dbTask => ({
+    id: dbTask.id,
+    description: dbTask.description,
+    points: dbTask.points,
+    tag: dbTask.tag,
+    completed: dbTask.completed,
+    createdAt: new Date(dbTask.created_at),
+    completedAt: dbTask.completed_at ? new Date(dbTask.completed_at) : undefined,
+    completedBy: dbTask.completed_by
+  }));
+};
+
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(taskReducer, null, initializeTaskState);
   const [loadingTasks, setLoadingTasks] = useState(false);
@@ -44,8 +58,11 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       try {
         console.log(`📊 Syncing ${dbTasks.length} tasks from database`);
         
-        // Update local state with DB tasks
-        dispatch({ type: 'SYNC_DB_TASKS', payload: dbTasks });
+        // Map database tasks to our Task interface format
+        const appTasks = mapDbTasksToAppTasks(dbTasks);
+        
+        // Update local state with mapped DB tasks
+        dispatch({ type: 'SYNC_DB_TASKS', payload: appTasks });
       } catch (err) {
         console.error("❌ Error syncing tasks:", err);
       } finally {
