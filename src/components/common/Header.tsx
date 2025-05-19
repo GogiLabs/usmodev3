@@ -1,5 +1,4 @@
 
-import { PointsDisplay } from "./PointsDisplay";
 import { ProfileSettings } from "./ProfileSettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { NetworkStatusIndicator } from "./NetworkStatusIndicator";
@@ -18,7 +17,6 @@ export function Header() {
       <div className="flex items-center gap-3">
         {isAuthenticated && (
           <>
-            <PointsDisplay />
             <NotificationCenter />
             <ProfileSettings />
           </>
