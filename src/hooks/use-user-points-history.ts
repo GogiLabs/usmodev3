@@ -17,6 +17,11 @@ export interface PointsHistoryItem {
   } | null;
 }
 
+// Type guard to check if the data has an error property
+function hasErrorProperty(obj: any): boolean {
+  return obj && typeof obj === 'object' && 'error' in obj;
+}
+
 export function useUserPointsHistory() {
   const [history, setHistory] = useState<PointsHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,20 +58,26 @@ export function useUserPointsHistory() {
         
         // Process and validate the data to match our expected types
         const typedData: PointsHistoryItem[] = (data || []).map(item => {
-          // For task data, ensure it matches our expected structure
-          // For task data
+          // Initialize task and reward as undefined
           let taskData: { description: string } | null = null;
-          const taskDescription = item.task?.description;
-          if (typeof taskDescription === 'string') {
-            taskData = { description: taskDescription };
+          let rewardData: { description: string } | null = null;
+
+          // For task data, check if it exists and isn't an error
+          if (item.task && typeof item.task === 'object' && !hasErrorProperty(item.task)) {
+            // Safe to access description now
+            const description = item.task.description;
+            if (typeof description === 'string') {
+              taskData = { description };
+            }
           }
 
-          // For reward data, ensure it matches our expected structure
-          // For reward data
-          let rewardData: { description: string } | null = null;
-          const rewardDescription = item.reward?.description;
-          if (typeof rewardDescription === 'string') {
-            rewardData = { description: rewardDescription };
+          // For reward data, check if it exists and isn't an error
+          if (item.reward && typeof item.reward === 'object' && !hasErrorProperty(item.reward)) {
+            // Safe to access description now
+            const description = item.reward.description;
+            if (typeof description === 'string') {
+              rewardData = { description };
+            }
           }
           
           return {
@@ -75,8 +86,8 @@ export function useUserPointsHistory() {
             source_type: item.source_type as 'task' | 'reward',
             source_id: item.source_id,
             created_at: item.created_at,
-            task: taskData ?? undefined,
-            reward: rewardData ?? undefined
+            task: taskData,
+            reward: rewardData
           };
         });
         
