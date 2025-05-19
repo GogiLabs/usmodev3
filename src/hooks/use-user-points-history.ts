@@ -54,18 +54,10 @@ export function useUserPointsHistory() {
         // Process and validate the data to match our expected types
         const typedData: PointsHistoryItem[] = (data || []).map(item => {
           // For task data, ensure it matches our expected structure
-          let taskData = null;
-          
-          // First check if item.task exists and is an object
-          if (item.task && typeof item.task === 'object') {
-            // Check that it's not an error object and has a description
-            if (!('error' in item.task)) {
-              // Use optional chaining to safely access the description property
-              const description = item.task?.description;
-              if (description) {
-                taskData = { description };
-              }
-            }
+          // For task data
+          let taskData: { description: string } | null = null;
+          if (item.task && typeof item.task === 'object' && item.task.description) {
+            taskData = { description: item.task.description };
           }
 
           // For reward data, ensure it matches our expected structure
