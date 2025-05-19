@@ -44,10 +44,12 @@ export function useNotifications() {
         if (error) throw error;
         
         // Type cast to ensure data matches our Notification type
-        setNotifications((data || []).map(item => ({
+        const typedData = (data || []).map(item => ({
           ...item,
           type: item.type as NotificationType
-        })));
+        }));
+        
+        setNotifications(typedData);
         setUnreadCount((data || []).filter(n => !n.is_read).length);
       } catch (err: any) {
         console.error('Error fetching notifications:', err);

@@ -11,10 +11,10 @@ export interface PointsHistoryItem {
   created_at: string;
   task?: {
     description: string;
-  };
+  } | null;
   reward?: {
     description: string;
-  };
+  } | null;
 }
 
 export function useUserPointsHistory() {
@@ -54,8 +54,8 @@ export function useUserPointsHistory() {
           source_type: item.source_type as 'task' | 'reward',
           source_id: item.source_id,
           created_at: item.created_at,
-          task: item.task,
-          reward: item.reward
+          task: item.task || null,
+          reward: item.reward || null
         }));
         
         setHistory(typedData);

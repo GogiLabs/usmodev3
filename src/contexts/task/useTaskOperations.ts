@@ -1,8 +1,9 @@
+
 import { useState, useCallback } from 'react';
 import { Task } from '@/types/Task';
 import { useAuth } from '../AuthContext';
 import { useTasks } from '@/hooks/use-tasks';
-import { useTaskService, mapDbTaskToAppTask } from '@/services/taskService';
+import { useTaskService } from '@/services/taskService';
 import { usePair } from '@/hooks/use-supabase-data';
 import { useToast } from '@/components/ui/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -14,18 +15,18 @@ export const useTaskOperations = () => {
 
   const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
   const { data: pair } = usePair();
-  const { tasks, loading: dbTasksLoading, error: dbTasksError, refetchTasks } = useTasks();
+  const { tasks, loading: dbTasksLoading, error: dbTasksError, refetchTasks: refreshTasks } = useTasks();
   const taskService = useTaskService(pair?.id);
   const { toast } = useToast();
 
-  // Refetch tasks function
+  // Enhanced refetch tasks function with retry count
   const refetchTasks = useCallback(() => {
     console.log('🔄 Manually refetching tasks');
     setRetryCount(prev => prev + 1);
     if (pair?.id) {
-      refetchTasks();
+      refreshTasks();
     }
-  }, [pair?.id, refetchTasks]);
+  }, [pair?.id, refreshTasks]);
 
   // Handle network errors
   const handleNetworkError = useCallback((error: any) => {
