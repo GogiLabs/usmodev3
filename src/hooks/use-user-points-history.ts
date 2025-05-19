@@ -89,8 +89,8 @@ export function useUserPointsHistory() {
             source_type: item.source_type as 'task' | 'reward',
             source_id: item.source_id,
             created_at: item.created_at,
-            task: taskData,
-            reward: rewardData
+            task: taskData ?? undefined,
+            reward: rewardData ?? undefined
           };
         });
         
