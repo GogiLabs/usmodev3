@@ -24,6 +24,11 @@ function hasErrorProperty(obj: any): obj is { error: string } {
   return obj && typeof obj === 'object' && 'error' in obj;
 }
 
+// Type guard to check if a value is a non-null object
+function isNonNullObject(value: any): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function useUserPointsHistory() {
   const [history, setHistory] = useState<PointHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,13 +69,14 @@ export function useUserPointsHistory() {
             
             // For task completions
             if (item.source_type === 'task') {
-              // Check if task exists and has description
-              const taskDescription = item.task && 
-                typeof item.task === 'object' && 
-                !hasErrorProperty(item.task) && 
-                item.task.description ? 
-                item.task.description : 
-                'Task completion';
+              // Safe type checking for task description
+              let taskDescription = 'Task completion';
+              
+              if (isNonNullObject(item.task) && !hasErrorProperty(item.task)) {
+                taskDescription = typeof item.task.description === 'string' 
+                  ? item.task.description 
+                  : 'Task completion';
+              }
               
               return {
                 id: item.id,
@@ -84,13 +90,14 @@ export function useUserPointsHistory() {
             
             // For reward claims
             if (item.source_type === 'reward') {
-              // Check if reward exists and has description
-              const rewardDescription = item.reward && 
-                typeof item.reward === 'object' && 
-                !hasErrorProperty(item.reward) && 
-                item.reward.description ? 
-                item.reward.description : 
-                'Reward claim';
+              // Safe type checking for reward description
+              let rewardDescription = 'Reward claim';
+              
+              if (isNonNullObject(item.reward) && !hasErrorProperty(item.reward)) {
+                rewardDescription = typeof item.reward.description === 'string'
+                  ? item.reward.description
+                  : 'Reward claim';
+              }
               
               return {
                 id: item.id,
