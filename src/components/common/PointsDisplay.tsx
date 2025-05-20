@@ -2,7 +2,7 @@
 import { useUserPoints } from "@/hooks/use-user-points";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +22,8 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const [lastPoints, setLastPoints] = useState<number | null>(null);
   const [pointDelta, setPointDelta] = useState<number>(0);
   const [showDelta, setShowDelta] = useState(false);
-  const [animationTriggeredAt, setAnimationTriggeredAt] = useState<number | null>(null);
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { isAuthenticated } = useAuth();
 
@@ -33,36 +34,57 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   
   // Detect changes to trigger animation
   useEffect(() => {
-    if (loading || lastPoints === null || availablePoints === lastPoints) {
+    // Clear any existing timeouts to prevent memory leaks
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+    }
+    if (deltaTimeoutRef.current) {
+      clearTimeout(deltaTimeoutRef.current);
+    }
+    
+    if (loading || lastPoints === null) {
       setLastPoints(availablePoints);
       return;
     }
     
-    // Calculate the delta
-    const delta = availablePoints - lastPoints;
-    const now = Date.now();
-    
-    // If we're already animating and it's been less than 2 seconds, aggregate the deltas
-    if (isAnimating && animationTriggeredAt && now - animationTriggeredAt < 2000) {
-      setPointDelta(prev => prev + delta);
-    } else {
+    // Only trigger animation if points actually changed
+    if (availablePoints !== lastPoints) {
+      // Calculate the delta
+      const delta = availablePoints - lastPoints;
+      
+      // Update state to trigger animations
       setPointDelta(delta);
       setIsAnimating(true);
-      setAnimationTriggeredAt(now);
+      setShowDelta(true);
+      
+      console.log(`Points changed from ${lastPoints} to ${availablePoints} (delta: ${delta})`);
+      
+      // Clear animations after delay
+      deltaTimeoutRef.current = setTimeout(() => {
+        setShowDelta(false);
+      }, 1500);
+      
+      animationTimeoutRef.current = setTimeout(() => {
+        setIsAnimating(false);
+      }, 1800);
+      
+      // Update last points
+      setLastPoints(availablePoints);
     }
     
-    setShowDelta(true);
-    setLastPoints(availablePoints);
-    
-    // Clear animations after delay
-    const hideTimer = setTimeout(() => setShowDelta(false), 1500);
-    const animTimer = setTimeout(() => setIsAnimating(false), 1800);
-    
+    // Cleanup function
     return () => {
-      clearTimeout(hideTimer);
-      clearTimeout(animTimer);
+      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+      if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
     };
-  }, [availablePoints, lastPoints, loading, isAnimating, animationTriggeredAt]);
+  }, [availablePoints, lastPoints, loading]);
+
+  // Set initial points value on first load
+  useEffect(() => {
+    if (!loading && lastPoints === null && points) {
+      setLastPoints(points.available_points);
+    }
+  }, [loading, points, lastPoints]);
 
   if (loading) {
     return (
@@ -115,7 +137,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
           </div>
           
           <div className="text-sm font-medium flex items-center gap-1 relative">
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {showDelta && pointDelta !== 0 && (
                 <motion.span 
                   className={cn(
@@ -126,12 +148,13 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3 }}
+                  key={`delta-${Date.now()}`}
                 >
                   {pointDelta > 0 ? `+${pointDelta}` : pointDelta}
                 </motion.span>
               )}
             </AnimatePresence>
-              
+            
             <motion.span
               className={cn(
                 "text-primary font-semibold transition-all",

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +14,7 @@ export function useUserPoints() {
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
   const initialized = useRef(false);
+  const lastFetchedPoints = useRef<UserPoints | null>(null);
   
   useEffect(() => {
     if (!user) {
@@ -38,17 +38,26 @@ export function useUserPoints() {
           spent_points: 0,
           available_points: 0
         };
+        
+        // Store the fetched points for comparison
+        const previousPoints = lastFetchedPoints.current;
+        lastFetchedPoints.current = newPoints;
     
-        // Prevent initial animation trigger
+        // Prevent initial animation trigger and only update if points actually changed
         setPoints(prev => {
+          // On first load, just set the points without triggering animations
           if (!initialized.current) {
             initialized.current = true;
             return newPoints;
           }
-          // If points changed, trigger re-render
-          if (JSON.stringify(prev) !== JSON.stringify(newPoints)) {
-            return newPoints;
+          
+          // If points changed, return the new points to trigger re-render and animations
+          if (previousPoints === null || 
+              previousPoints.available_points !== newPoints.available_points) {
+            return { ...newPoints };
           }
+          
+          // No change, keep previous state
           return prev;
         });
       } catch (err: any) {
