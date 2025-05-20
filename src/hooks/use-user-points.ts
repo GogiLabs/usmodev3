@@ -17,7 +17,6 @@ export function useUserPoints() {
   const initialized = useRef(false);
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   const fetchCounter = useRef(0);
-  const lastUpdate = useRef<number>(0);
   
   const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
@@ -46,19 +45,29 @@ export function useUserPoints() {
       
       // Store the fetched points for comparison
       const previousPoints = lastFetchedPoints.current;
-      const now = Date.now();
-      if (now > lastUpdate.current) {
-        lastUpdate.current = now;
-        lastFetchedPoints.current = newPoints;
-      
-        setPoints(() => {
-          console.log(`🔁 [useUserPoints] Setting points state to:`, newPoints);
-          return { ...newPoints }; // Always return new object to trigger UI updates
-        });
-      } else {
-        console.log(`⏩ [useUserPoints] Ignoring stale response (#${fetchId})`);
-      }
+      lastFetchedPoints.current = newPoints;
+  
+      // Update points state, with special handling for different scenarios
+      setPoints(prev => {
+        // On first load, just set the points without triggering animations
+        if (!initialized.current) {
+          initialized.current = true;
+          console.log(`🏁 [useUserPoints] First load complete with points:`, newPoints);
+          return newPoints;
+        }
         
+        // If points changed or force update is requested, return new points to trigger re-render
+        if (forceUpdate || 
+            previousPoints === null || 
+            previousPoints.available_points !== newPoints.available_points) {
+          console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
+          return { ...newPoints };
+        }
+        
+        // No change, keep previous state
+        console.log(`🛑 [useUserPoints] No change in points, keeping previous state`);
+        return prev;
+      });
     } catch (err: any) {
       console.error('❌ [useUserPoints] Error fetching user points:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
