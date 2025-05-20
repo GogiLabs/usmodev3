@@ -30,15 +30,24 @@ export function TaskItem({ task }: TaskItemProps) {
     }
     
     if (!task.completed) {
+      console.log(`🎯 [TaskItem] Starting task completion for task: ${task.id}`);
       setIsCompleting(true);
-      await completeTask(task.id);
       
-      // Make sure we refetch the points after a task is completed
-      refetchPoints();
-      
-      setTimeout(() => {
-        setIsCompleting(false);
-      }, 500);
+      try {
+        await completeTask(task.id);
+        console.log(`✅ [TaskItem] Task completed: ${task.id}`);
+        
+        // Make sure we refetch the points after a task is completed
+        console.log(`🔄 [TaskItem] Calling refetchPoints after task completion`);
+        await refetchPoints();
+        console.log(`✅ [TaskItem] Points refetched after task completion`);
+      } catch (error) {
+        console.error(`❌ [TaskItem] Error completing task:`, error);
+      } finally {
+        setTimeout(() => {
+          setIsCompleting(false);
+        }, 500);
+      }
     }
   };
   
@@ -49,16 +58,21 @@ export function TaskItem({ task }: TaskItemProps) {
     }
     
     setIsDeleting(true);
+    console.log(`🗑️ [TaskItem] Starting task deletion for task: ${task.id}`);
+    
     try {
       await deleteTask(task.id);
+      console.log(`✅ [TaskItem] Task deleted: ${task.id}`);
       
       // If the task was completed, we should also refetch points 
       // since deleting a completed task might affect points
       if (task.completed) {
-        refetchPoints();
+        console.log(`🔄 [TaskItem] Calling refetchPoints after deleting completed task`);
+        await refetchPoints();
+        console.log(`✅ [TaskItem] Points refetched after task deletion`);
       }
-    } catch (error) {
-      console.error("Error deleting task:", error);
+    } catch (error: any) {
+      console.error(`❌ [TaskItem] Error deleting task:`, error);
       setIsDeleting(false);
       
       toast({

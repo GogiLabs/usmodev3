@@ -8,13 +8,13 @@ interface TaskContextType {
   tasks: Task[];
   earnedPoints: number;
   addTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => void;
-  completeTask: (id: string) => void;
-  deleteTask: (id: string) => void;
+  completeTask: (id: string) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
   getTagColor: (tag: TaskTag) => string;
   loadingTasks: boolean;
   error: Error | null;
-  refetchTasks: () => void;
-  refetchPoints: () => void;
+  refetchTasks: () => Promise<void>;
+  refetchPoints: () => Promise<void>;
 }
 
 export const TaskContext = createContext<TaskContextType | undefined>(undefined);

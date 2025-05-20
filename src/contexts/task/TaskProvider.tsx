@@ -23,12 +23,14 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   const { points, refetch: refetchPoints } = useUserPoints();
   const { toast } = useToast();
   
+  console.log(`🔄 [TaskProvider] Initializing/updating provider. isPaired: ${isPaired}, hasUser: ${!!user}`);
+  
   const taskService = useTaskService(pairData?.pair_id, refetchPoints);
 
   // Sync tasks from DB to state
   useEffect(() => {
     if (tasks && !tasksLoading) {
-      console.log(`📊 Syncing ${tasks.length} tasks from database`);
+      console.log(`📊 [TaskProvider] Syncing ${tasks.length} tasks from database`);
       
       // Calculate earned points from completed tasks
       const earnedPoints = tasks.reduce((sum, task) => 
@@ -46,7 +48,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   // Update error state
   useEffect(() => {
     if (tasksError) {
-      console.error('❌ Tasks fetch error:', tasksError);
+      console.error('❌ [TaskProvider] Tasks fetch error:', tasksError);
       setError(tasksError);
     } else {
       setError(null);
@@ -55,7 +57,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Function to add a new task
   const addTask = async (taskData: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => {
-    console.log('➕ Adding new task:', taskData);
+    console.log('➕ [TaskProvider] Adding new task:', taskData);
     
     // Validate task data
     if (!taskData.description.trim()) {
@@ -79,16 +81,16 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     
     if (isAuthenticated && isPaired) {
       try {
-        console.log('🔄 Sending task to database:', taskData);
+        console.log('🔄 [TaskProvider] Sending task to database:', taskData);
         await taskService.createTask(taskData);
-        console.log('✅ Task created in database');
+        console.log('✅ [TaskProvider] Task created in database');
         
         // Success toast
         sonnerToast.success("Task added", {
           description: `"${taskData.description}" has been added`
         });
       } catch (error: any) {
-        console.error("❌ Error creating task:", error);
+        console.error("❌ [TaskProvider] Error creating task:", error);
         
         // Remove the task from the local state if the DB operation failed
         dispatch({ type: 'REMOVE_TASK', payload: newTask.id });
@@ -104,7 +106,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   
   // Function to complete a task
   const completeTask = async (id: string) => {
-    console.log('✅ Completing task:', id);
+    console.log('✅ [TaskProvider] Completing task:', id);
     
     if (!isAuthenticated) {
       showAuthRequiredToast();
@@ -113,12 +115,12 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     
     const task = state.tasks.find(t => t.id === id);
     if (!task) {
-      console.error(`❌ Task with ID ${id} not found`);
+      console.error(`❌ [TaskProvider] Task with ID ${id} not found`);
       return;
     }
     
     if (task.completed) {
-      console.log('⚠️ Task already completed:', id);
+      console.log('⚠️ [TaskProvider] Task already completed:', id);
       return;
     }
     
@@ -127,18 +129,20 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     
     if (isAuthenticated && isPaired && user) {
       try {
-        console.log('🔄 Marking task as completed in database:', id);
+        console.log('🔄 [TaskProvider] Marking task as completed in database:', id);
         await taskService.completeTask(id, user.id);
-        console.log('✅ Task marked as completed in database');
+        console.log('✅ [TaskProvider] Task marked as completed in database');
         
         // Make sure we refetch the points after completion
-        refetchPoints();
+        console.log('🔄 [TaskProvider] Explicitly refetching points after task completion');
+        await refetchPoints();
+        console.log('✅ [TaskProvider] Points refetched after task completion');
         
         sonnerToast.success("Task completed!", {
           description: `You earned ${task.points} points`,
         });
       } catch (error: any) {
-        console.error("❌ Error completing task:", error);
+        console.error("❌ [TaskProvider] Error completing task:", error);
         
         // Revert the completed status if the DB operation failed
         dispatch({ type: 'UNDO_COMPLETE_TASK', payload: id });
@@ -158,7 +162,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   
   // Function to delete a task
   const deleteTask = async (id: string) => {
-    console.log('🗑️ Deleting task:', id);
+    console.log('🗑️ [TaskProvider] Deleting task:', id);
     
     if (!isAuthenticated) {
       showAuthRequiredToast();
@@ -173,9 +177,15 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     
     if (isAuthenticated && isPaired) {
       try {
-        console.log('🔄 Deleting task from database:', id);
+        console.log('🔄 [TaskProvider] Deleting task from database:', id);
         await taskService.deleteTask(id);
-        console.log('✅ Task deleted from database');
+        console.log('✅ [TaskProvider] Task deleted from database');
+        
+        if (taskToDelete && taskToDelete.completed) {
+          console.log('🔄 [TaskProvider] Refetching points after deleting completed task');
+          await refetchPoints();
+          console.log('✅ [TaskProvider] Points refetched after task deletion');
+        }
         
         if (taskToDelete) {
           sonnerToast.success("Task deleted", {
@@ -183,7 +193,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
           });
         }
       } catch (error: any) {
-        console.error("❌ Error deleting task:", error);
+        console.error("❌ [TaskProvider] Error deleting task:", error);
         
         // Revert the deletion if the DB operation failed
         if (taskToDelete) {
@@ -203,49 +213,40 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   
-  // Get a color for a task tag
-  const getTagColor = (tag: TaskTag): string => {
-    switch (tag) {
-      case 'Cleaning':
-        return 'bg-blue-100 text-blue-800';
-      case 'Cooking':
-        return 'bg-orange-100 text-orange-800';
-      case 'Laundry':
-        return 'bg-purple-100 text-purple-800';
-      case 'Dishes':
-        return 'bg-cyan-100 text-cyan-800';
-      case 'GroceryShopping':
-        return 'bg-green-100 text-green-800';
-      case 'BillsAndFinances':
-        return 'bg-amber-100 text-amber-800';
-      case 'RepairsAndMaintenance':
-        return 'bg-stone-100 text-stone-800';
-      case 'PetCare':
-        return 'bg-pink-100 text-pink-800';
-      case 'Gardening':
-        return 'bg-emerald-100 text-emerald-800';
-      case 'Other':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  // Create a wrapped version of refetchPoints with logging
+  const enhancedRefetchPoints = useCallback(async () => {
+    console.log('🔄 [TaskProvider] refetchPoints called');
+    try {
+      await refetchPoints();
+      console.log('✅ [TaskProvider] refetchPoints completed successfully');
+    } catch (error) {
+      console.error('❌ [TaskProvider] Error in refetchPoints:', error);
     }
+  }, [refetchPoints]);
+  
+  // Get a color for a task tag (moved from getTagColor function to use the utility)
+  const getTagColor = useCallback((tag: TaskTag): string => {
+    return state.tagColors[tag] || "bg-gray-100 text-gray-800";
+  }, [state.tagColors]);
+
+  // Explicitly log each time the context value changes
+  const contextValue = {
+    tasks: state.tasks,
+    earnedPoints: state.earnedPoints,
+    addTask,
+    completeTask,
+    deleteTask,
+    getTagColor,
+    loadingTasks,
+    error,
+    refetchTasks,
+    refetchPoints: enhancedRefetchPoints
   };
+  
+  console.log('🔄 [TaskProvider] Refreshing context value with tasks:', state.tasks.length);
 
   return (
-    <TaskContext.Provider
-      value={{
-        tasks: state.tasks,
-        earnedPoints: state.earnedPoints,
-        addTask,
-        completeTask,
-        deleteTask,
-        getTagColor,
-        loadingTasks,
-        error,
-        refetchTasks,
-        refetchPoints
-      }}
-    >
+    <TaskContext.Provider value={contextValue}>
       {children}
     </TaskContext.Provider>
   );

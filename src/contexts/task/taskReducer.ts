@@ -1,76 +1,103 @@
 
-import { Task } from '@/types/Task';
+import { Task, TaskTag } from '@/types/Task';
+import { getTagColor } from './taskUtils';
 
-// Types
+// Export key for localStorage
+export const TASKS_STORAGE_KEY = 'app_tasks_state';
+
+// Define state interface
 export interface TaskState {
   tasks: Task[];
   earnedPoints: number;
+  tagColors: Record<TaskTag, string>;
 }
 
-export type TaskAction =
-  | { type: 'ADD_TASK'; payload: Task }
-  | { type: 'COMPLETE_TASK'; payload: { id: string, userId?: string } }
-  | { type: 'UNDO_COMPLETE_TASK'; payload: string }
-  | { type: 'DELETE_TASK'; payload: { id: string } }
-  | { type: 'LOAD_TASKS'; payload: TaskState }
-  | { type: 'SET_TASKS'; payload: { tasks: Task[], earnedPoints: number } }
-  | { type: 'REMOVE_TASK'; payload: string }
-  | { type: 'SYNC_DB_TASKS'; payload: Task[] };
-
-// Local storage key
-export const TASKS_STORAGE_KEY = 'usmode_tasks';
-
-// Initial state
+// Define initial state
 export const initialTaskState: TaskState = {
   tasks: [],
-  earnedPoints: 0
+  earnedPoints: 0,
+  tagColors: {
+    'Cleaning': 'bg-blue-100 text-blue-800',
+    'Cooking': 'bg-orange-100 text-orange-800',
+    'Laundry': 'bg-purple-100 text-purple-800',
+    'Dishes': 'bg-cyan-100 text-cyan-800',
+    'GroceryShopping': 'bg-green-100 text-green-800',
+    'BillsAndFinances': 'bg-amber-100 text-amber-800',
+    'RepairsAndMaintenance': 'bg-stone-100 text-stone-800',
+    'PetCare': 'bg-pink-100 text-pink-800',
+    'Gardening': 'bg-emerald-100 text-emerald-800',
+    'Other': 'bg-gray-100 text-gray-800',
+  }
 };
 
-// Task reducer function
+// Define action types
+type TaskAction =
+  | { type: 'SET_TASKS'; payload: { tasks: Task[]; earnedPoints: number } }
+  | { type: 'ADD_TASK'; payload: Task }
+  | { type: 'REMOVE_TASK'; payload: string }
+  | { type: 'COMPLETE_TASK'; payload: { id: string; userId?: string } }
+  | { type: 'UNDO_COMPLETE_TASK'; payload: string }
+  | { type: 'DELETE_TASK'; payload: { id: string } }
+  | { type: 'SYNC_POINTS'; payload: number }
+  | { type: 'GET_STATE' };
+
+// Reducer function
 export const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
-  let updatedState: TaskState;
+  console.log(`🔄 [taskReducer] Processing action: ${action.type}`);
   
   switch (action.type) {
-    case 'ADD_TASK':
-      updatedState = {
+    case 'SET_TASKS':
+      return {
         ...state,
-        tasks: [
-          action.payload,
-          ...state.tasks,
-        ],
+        tasks: action.payload.tasks,
+        earnedPoints: action.payload.earnedPoints
       };
-      break;
-      
+
+    case 'ADD_TASK':
+      return {
+        ...state,
+        tasks: [action.payload, ...state.tasks]
+      };
+
+    case 'REMOVE_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.filter(task => task.id !== action.payload)
+      };
+
     case 'COMPLETE_TASK': {
-      const updatedTasks = state.tasks.map((task) => {
-        if (task.id === action.payload.id && !task.completed) {
+      const now = new Date();
+      const { id, userId } = action.payload;
+      const updatedTasks = state.tasks.map(task => {
+        if (task.id === id) {
           return {
             ...task,
             completed: true,
-            completedAt: new Date(),
-            completedBy: action.payload.userId
+            completedAt: now,
+            completedBy: userId
           };
         }
         return task;
       });
-
-      // Calculate new points
-      const completedTask = state.tasks.find(
-        (task) => task.id === action.payload.id && !task.completed
+      
+      // Recalculate earned points
+      const earnedPoints = updatedTasks.reduce(
+        (sum, task) => (task.completed ? sum + task.points : sum),
+        0
       );
-      const pointsToAdd = completedTask ? completedTask.points : 0;
+      
+      console.log(`📊 [taskReducer] Completed task. New earned points: ${earnedPoints}`);
 
-      updatedState = {
+      return {
+        ...state,
         tasks: updatedTasks,
-        earnedPoints: state.earnedPoints + pointsToAdd,
+        earnedPoints
       };
-      break;
     }
-    
+
     case 'UNDO_COMPLETE_TASK': {
-      const taskId = action.payload;
-      const updatedTasks = state.tasks.map((task) => {
-        if (task.id === taskId) {
+      const updatedTasks = state.tasks.map(task => {
+        if (task.id === action.payload) {
           return {
             ...task,
             completed: false,
@@ -81,57 +108,52 @@ export const taskReducer = (state: TaskState, action: TaskAction): TaskState => 
         return task;
       });
       
-      // Recalculate points
-      const completedTask = state.tasks.find((task) => task.id === taskId && task.completed);
-      const pointsToSubtract = completedTask ? completedTask.points : 0;
+      // Recalculate earned points 
+      const earnedPoints = updatedTasks.reduce(
+        (sum, task) => (task.completed ? sum + task.points : sum),
+        0
+      );
       
-      updatedState = {
-        tasks: updatedTasks,
-        earnedPoints: state.earnedPoints - pointsToSubtract,
-      };
-      break;
-    }
-    
-    case 'DELETE_TASK':
-      updatedState = {
-        ...state,
-        tasks: state.tasks.filter((task) => task.id !== action.payload.id),
-      };
-      break;
-    
-    case 'REMOVE_TASK':
-      updatedState = {
-        ...state,
-        tasks: state.tasks.filter((task) => task.id !== action.payload),
-      };
-      break;
-      
-    case 'LOAD_TASKS':
-      updatedState = action.payload;
-      break;
-      
-    case 'SET_TASKS':
-      updatedState = {
-        tasks: action.payload.tasks,
-        earnedPoints: action.payload.earnedPoints
-      };
-      break;
+      console.log(`📊 [taskReducer] Undid task completion. New earned points: ${earnedPoints}`);
 
-    case 'SYNC_DB_TASKS':
-      updatedState = {
-        tasks: action.payload,
-        // Calculate earned points from completed tasks
-        earnedPoints: action.payload.reduce(
-          (total, task) => total + (task.completed ? task.points : 0), 0
-        ),
+      return {
+        ...state,
+        tasks: updatedTasks,
+        earnedPoints
       };
-      break;
+    }
+
+    case 'DELETE_TASK': {
+      const { id } = action.payload;
+      const filteredTasks = state.tasks.filter(task => task.id !== id);
+      
+      // Recalculate earned points
+      const earnedPoints = filteredTasks.reduce(
+        (sum, task) => (task.completed ? sum + task.points : sum), 
+        0
+      );
+      
+      console.log(`📊 [taskReducer] Deleted task. New earned points: ${earnedPoints}`);
+
+      return {
+        ...state,
+        tasks: filteredTasks,
+        earnedPoints
+      };
+    }
+
+    case 'SYNC_POINTS':
+      console.log(`📊 [taskReducer] Syncing points manually: ${action.payload}`);
+      return {
+        ...state,
+        earnedPoints: action.payload
+      };
+
+    case 'GET_STATE':
+      // Just return the current state (useful for checking state)
+      return state;
       
     default:
       return state;
   }
-  
-  // Save to localStorage whenever state changes (but only when not using DB)
-  localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(updatedState));
-  return updatedState;
 };

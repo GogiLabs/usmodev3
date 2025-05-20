@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Reward } from "@/types/Reward";
 import { useReward } from "@/contexts/reward/RewardContext";
@@ -47,17 +48,29 @@ export function RewardItem({ reward }: RewardItemProps) {
     }
     
     if (canClaim) {
+      console.log(`🎯 [RewardItem] Claiming reward: ${reward.id} (${reward.description})`);
       setIsAnimating(true);
       setShowConfetti(true);
-      await claimReward(reward.id);
       
-      // Make sure to refetch points after claiming a reward
-      refetchPoints();
-      
-      // Show success toast
-      toast(`Reward Claimed!`, {
-        description: `You've claimed "${reward.description}" for ${reward.pointCost} points.`,
-      });
+      try {
+        await claimReward(reward.id);
+        console.log(`✅ [RewardItem] Reward claimed successfully: ${reward.id}`);
+        
+        // Make sure to refetch points after claiming a reward
+        console.log(`🔄 [RewardItem] Explicitly refetching points after claiming reward`);
+        await refetchPoints();
+        console.log(`✅ [RewardItem] Points refetched after claiming reward`);
+        
+        // Show success toast
+        toast(`Reward Claimed!`, {
+          description: `You've claimed "${reward.description}" for ${reward.pointCost} points.`,
+        });
+      } catch (error) {
+        console.error(`❌ [RewardItem] Error claiming reward:`, error);
+        toast.error("Failed to claim reward", {
+          description: "There was a problem claiming this reward. Please try again.",
+        });
+      }
       
       // Reset animation state after animation completes
       setTimeout(() => {
@@ -78,13 +91,21 @@ export function RewardItem({ reward }: RewardItemProps) {
     }
     
     setIsDeleting(true);
+    console.log(`🗑️ [RewardItem] Deleting reward: ${reward.id} (${reward.description})`);
     
-    // Add small delay for animation
-    await deleteReward(reward.id);
-    
-    // If the reward was claimed, refetch points as deleting a claimed reward might affect points
-    if (reward.claimed) {
-      refetchPoints();
+    try {
+      await deleteReward(reward.id);
+      console.log(`✅ [RewardItem] Reward deleted: ${reward.id}`);
+      
+      // If the reward was claimed, refetch points as deleting a claimed reward might affect points
+      if (reward.claimed) {
+        console.log(`🔄 [RewardItem] Refetching points after deleting claimed reward`);
+        await refetchPoints();
+        console.log(`✅ [RewardItem] Points refetched after reward deletion`);
+      }
+    } catch (error) {
+      console.error(`❌ [RewardItem] Error deleting reward:`, error);
+      setIsDeleting(false);
     }
   };
 

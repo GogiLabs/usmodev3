@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,9 +15,15 @@ export function useUserPoints() {
   const { user } = useAuth();
   const initialized = useRef(false);
   const lastFetchedPoints = useRef<UserPoints | null>(null);
+  const fetchCounter = useRef(0);
   
   const fetchUserPoints = useCallback(async () => {
     if (!user) return;
+    
+    // Increment counter each time fetch is called
+    fetchCounter.current += 1;
+    const fetchId = fetchCounter.current;
+    console.log(`🔄 [useUserPoints] Fetching points (#${fetchId}) for user: ${user.id}`);
     
     try {
       setLoading(true);
@@ -35,6 +40,8 @@ export function useUserPoints() {
         available_points: 0
       };
       
+      console.log(`✅ [useUserPoints] Points fetched (#${fetchId}):`, newPoints);
+      
       // Store the fetched points for comparison
       const previousPoints = lastFetchedPoints.current;
       lastFetchedPoints.current = newPoints;
@@ -44,20 +51,23 @@ export function useUserPoints() {
         // On first load, just set the points without triggering animations
         if (!initialized.current) {
           initialized.current = true;
+          console.log(`🏁 [useUserPoints] First load complete with points:`, newPoints);
           return newPoints;
         }
         
         // If points changed, return the new points to trigger re-render and animations
         if (previousPoints === null || 
             previousPoints.available_points !== newPoints.available_points) {
+          console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
           return { ...newPoints };
         }
         
         // No change, keep previous state
+        console.log(`🛑 [useUserPoints] No change in points, keeping previous state`);
         return prev;
       });
     } catch (err: any) {
-      console.error('Error fetching user points:', err);
+      console.error('❌ [useUserPoints] Error fetching user points:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
@@ -65,7 +75,9 @@ export function useUserPoints() {
   }, [user]);
 
   useEffect(() => {
+    console.log(`🔍 [useUserPoints] Hook initialized/updated with user:`, user?.id);
     if (!user) {
+      console.log(`⚠️ [useUserPoints] No user found, clearing points`);
       setPoints(null);
       setLoading(false);
       return;
@@ -81,15 +93,25 @@ export function useUserPoints() {
         schema: 'public', 
         table: 'user_points',
         filter: `user_id=eq.${user.id}`
-      }, () => {
+      }, (payload) => {
+        console.log('📣 [useUserPoints] Realtime update received:', payload);
         fetchUserPoints();
       })
       .subscribe();
     
+    console.log(`🎧 [useUserPoints] Subscribed to realtime updates for user ${user.id}`);
+    
     return () => {
       channel.unsubscribe();
+      console.log(`🔌 [useUserPoints] Unsubscribed from realtime updates`);
     };
   }, [user, fetchUserPoints]);
   
-  return { points, loading, error, refetch: fetchUserPoints };
+  // Create a wrapped refetch function with logging
+  const refetch = useCallback(() => {
+    console.log(`🔄 [useUserPoints] Manual refetch called`);
+    return fetchUserPoints();
+  }, [fetchUserPoints]);
+  
+  return { points, loading, error, refetch };
 }
