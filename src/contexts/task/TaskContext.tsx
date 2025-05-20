@@ -7,9 +7,9 @@ import { TaskProvider } from './TaskProvider';
 interface TaskContextType {
   tasks: Task[];
   earnedPoints: number;
-  addTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => void;
-  completeTask: (id: string) => void;
-  deleteTask: (id: string) => void;
+  addTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt' | 'completedAt'>) => Promise<void>;
+  completeTask: (id: string) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
   getTagColor: (tag: TaskTag) => string;
   loadingTasks: boolean;
   error: Error | null;

@@ -78,7 +78,7 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
     }
     
     // Get the current tasks state from the state object
-    const state = { tasks: [] };
+    const state = { tasks: [] as Task[] };
     dispatch({ type: 'GET_STATE', payload: (currentState: any) => {
       Object.assign(state, currentState);
     }});
@@ -109,7 +109,7 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
         refetchPoints();
         
         sonnerToast.success("Task completed!", {
-          description: `You earned points`,
+          description: `You earned ${task.points} points`,
         });
       } catch (error: any) {
         console.error("❌ Error completing task:", error);
@@ -125,7 +125,7 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
       }
     } else {
       sonnerToast.success("Task completed!", {
-        description: `You earned points`,
+        description: `You earned ${task.points} points`,
       });
     }
   }, [isAuthenticated, isPaired, user, taskService, dispatch, toast, showAuthRequiredToast, refetchPoints]);
@@ -140,7 +140,7 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
     }
     
     // Get the current tasks state from the state object
-    const state = { tasks: [] };
+    const state = { tasks: [] as Task[] };
     dispatch({ type: 'GET_STATE', payload: (currentState: any) => {
       Object.assign(state, currentState);
     }});

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
@@ -30,14 +31,23 @@ export function TaskItem({ task }: TaskItemProps) {
     
     if (!task.completed) {
       setIsCompleting(true);
-      await completeTask(task.id);
-      
-      // Make sure we refetch the points after a task is completed
-      refetchPoints();
-      
-      setTimeout(() => {
-        setIsCompleting(false);
-      }, 500);
+      try {
+        await completeTask(task.id);
+        
+        // Make sure we refetch the points after a task is completed
+        refetchPoints();
+      } catch (error) {
+        console.error("Error completing task:", error);
+        toast({
+          title: "Error completing task",
+          description: "There was an error completing this task. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setTimeout(() => {
+          setIsCompleting(false);
+        }, 500);
+      }
     }
   };
   

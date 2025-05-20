@@ -10,7 +10,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   // Use custom hooks to separate concerns
   const { tasks, earnedPoints, dispatch, loadingTasks, error, refetchTasks } = useTaskState();
   const { getTagColor } = useTagColors();
-  const { pairLoading } = usePairStatus();
+  const { loading: pairLoading } = usePairStatus();
   const { addTask, completeTask, deleteTask } = useTaskActions(dispatch);
   
   // Get refetchPoints from useUserPoints for the context
