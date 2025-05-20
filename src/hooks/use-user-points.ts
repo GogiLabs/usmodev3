@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,7 +17,7 @@ export function useUserPoints() {
   const initialized = useRef(false);
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   
-  const fetchUserPoints = async () => {
+  const fetchUserPoints = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -61,7 +62,7 @@ export function useUserPoints() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -88,7 +89,7 @@ export function useUserPoints() {
     return () => {
       channel.unsubscribe();
     };
-  }, [user]);
+  }, [user, fetchUserPoints]);
   
   return { points, loading, error, refetch: fetchUserPoints };
 }

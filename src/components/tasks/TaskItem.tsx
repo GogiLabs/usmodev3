@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
 import { useTask } from "@/contexts/task";
-import { CheckCircle2, Trash2, Clock, Calendar } from "lucide-react";
+import { CheckCircle2, Trash2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";

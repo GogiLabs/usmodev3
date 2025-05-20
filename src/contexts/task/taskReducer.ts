@@ -10,12 +10,21 @@ export interface TaskState {
 export type TaskAction =
   | { type: 'ADD_TASK'; payload: Task }
   | { type: 'COMPLETE_TASK'; payload: { id: string, userId?: string } }
+  | { type: 'UNDO_COMPLETE_TASK'; payload: string }
   | { type: 'DELETE_TASK'; payload: { id: string } }
   | { type: 'LOAD_TASKS'; payload: TaskState }
+  | { type: 'SET_TASKS'; payload: { tasks: Task[], earnedPoints: number } }
+  | { type: 'REMOVE_TASK'; payload: string }
   | { type: 'SYNC_DB_TASKS'; payload: Task[] };
 
 // Local storage key
 export const TASKS_STORAGE_KEY = 'usmode_tasks';
+
+// Initial state
+export const initialTaskState: TaskState = {
+  tasks: [],
+  earnedPoints: 0
+};
 
 // Task reducer function
 export const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
@@ -58,15 +67,54 @@ export const taskReducer = (state: TaskState, action: TaskAction): TaskState => 
       break;
     }
     
+    case 'UNDO_COMPLETE_TASK': {
+      const taskId = action.payload;
+      const updatedTasks = state.tasks.map((task) => {
+        if (task.id === taskId) {
+          return {
+            ...task,
+            completed: false,
+            completedAt: undefined,
+            completedBy: undefined
+          };
+        }
+        return task;
+      });
+      
+      // Recalculate points
+      const completedTask = state.tasks.find((task) => task.id === taskId && task.completed);
+      const pointsToSubtract = completedTask ? completedTask.points : 0;
+      
+      updatedState = {
+        tasks: updatedTasks,
+        earnedPoints: state.earnedPoints - pointsToSubtract,
+      };
+      break;
+    }
+    
     case 'DELETE_TASK':
       updatedState = {
         ...state,
         tasks: state.tasks.filter((task) => task.id !== action.payload.id),
       };
       break;
+    
+    case 'REMOVE_TASK':
+      updatedState = {
+        ...state,
+        tasks: state.tasks.filter((task) => task.id !== action.payload),
+      };
+      break;
       
     case 'LOAD_TASKS':
       updatedState = action.payload;
+      break;
+      
+    case 'SET_TASKS':
+      updatedState = {
+        tasks: action.payload.tasks,
+        earnedPoints: action.payload.earnedPoints
+      };
       break;
 
     case 'SYNC_DB_TASKS':
