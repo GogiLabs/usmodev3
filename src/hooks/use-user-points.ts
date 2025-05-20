@@ -59,27 +59,6 @@ export function useUserPoints() {
         console.log(`⏩ [useUserPoints] Ignoring stale response (#${fetchId})`);
       }
         
-      // Update points state, with special handling for different scenarios
-      setPoints(prev => {
-        // On first load, just set the points without triggering animations
-        if (!initialized.current) {
-          initialized.current = true;
-          console.log(`🏁 [useUserPoints] First load complete with points:`, newPoints);
-          return newPoints;
-        }
-        
-        // If points changed or force update is requested, return new points to trigger re-render
-        if (forceUpdate || 
-            previousPoints === null || 
-            previousPoints.available_points !== newPoints.available_points) {
-          console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
-          return { ...newPoints };
-        }
-        
-        // No change, keep previous state
-        console.log(`🛑 [useUserPoints] No change in points, keeping previous state`);
-        return prev;
-      });
     } catch (err: any) {
       console.error('❌ [useUserPoints] Error fetching user points:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
