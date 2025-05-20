@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +13,7 @@ export interface PairData {
 export function usePairStatus() {
   const [isPaired, setIsPaired] = useState<boolean>(false);
   const [pairData, setPairData] = useState<PairData | null>(null);
-  const [pairLoading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
   
@@ -88,5 +89,5 @@ export function usePairStatus() {
     };
   }, [user]);
   
-  return { isPaired, pairData, loading: pairLoading, pairLoading, error };
+  return { isPaired, pairData, loading, error };
 }
