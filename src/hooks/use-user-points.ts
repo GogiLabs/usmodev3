@@ -17,6 +17,7 @@ export function useUserPoints() {
   const initialized = useRef(false);
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   const fetchCounter = useRef(0);
+  const lastUpdate = useRef<number>(0);
   
   const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
@@ -45,8 +46,19 @@ export function useUserPoints() {
       
       // Store the fetched points for comparison
       const previousPoints = lastFetchedPoints.current;
-      lastFetchedPoints.current = newPoints;
-  
+      const now = Date.now();
+      if (now > lastUpdate.current) {
+        lastUpdate.current = now;
+        lastFetchedPoints.current = newPoints;
+      
+        setPoints(() => {
+          console.log(`🔁 [useUserPoints] Setting points state to:`, newPoints);
+          return { ...newPoints }; // Always return new object to trigger UI updates
+        });
+      } else {
+        console.log(`⏩ [useUserPoints] Ignoring stale response (#${fetchId})`);
+      }
+        
       // Update points state, with special handling for different scenarios
       setPoints(prev => {
         // On first load, just set the points without triggering animations
