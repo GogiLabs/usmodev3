@@ -77,9 +77,14 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
       return;
     }
     
+    // Get the current tasks state from the state object
+    const state = { tasks: [] };
+    dispatch({ type: 'GET_STATE', payload: (currentState: any) => {
+      Object.assign(state, currentState);
+    }});
+    
     // Find the task to be completed
-    const tasks = dispatch((state: any) => state.tasks);
-    const task = tasks.find((t: Task) => t.id === id);
+    const task = state.tasks.find((t: Task) => t.id === id);
     
     if (!task) {
       console.error(`❌ Task with ID ${id} not found`);
@@ -134,9 +139,14 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
       return;
     }
     
+    // Get the current tasks state from the state object
+    const state = { tasks: [] };
+    dispatch({ type: 'GET_STATE', payload: (currentState: any) => {
+      Object.assign(state, currentState);
+    }});
+    
     // Find the task to be deleted for showing in toast
-    const tasks = dispatch((state: any) => state.tasks);
-    const taskToDelete = tasks.find((t: Task) => t.id === id);
+    const taskToDelete = state.tasks.find((t: Task) => t.id === id);
     
     // Optimistically update UI
     dispatch({ type: 'DELETE_TASK', payload: { id } });

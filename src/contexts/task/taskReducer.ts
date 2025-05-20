@@ -1,3 +1,4 @@
+
 import { Task } from '@/types/Task';
 
 // Types
@@ -9,12 +10,13 @@ export interface TaskState {
 export type TaskAction =
   | { type: 'ADD_TASK'; payload: Task }
   | { type: 'COMPLETE_TASK'; payload: { id: string, userId?: string } }
-  | { type: 'UNDO_COMPLETE_TASK'; payload: string }
+  | { type: 'UNDO_COMPLETE_TASK'; payload: { id: string } }
   | { type: 'DELETE_TASK'; payload: { id: string } }
   | { type: 'LOAD_TASKS'; payload: TaskState }
   | { type: 'SET_TASKS'; payload: { tasks: Task[], earnedPoints: number } }
-  | { type: 'REMOVE_TASK'; payload: string }
-  | { type: 'SYNC_DB_TASKS'; payload: Task[] };
+  | { type: 'REMOVE_TASK'; payload: { id: string } }
+  | { type: 'SYNC_DB_TASKS'; payload: Task[] }
+  | { type: 'GET_STATE'; payload: (state: TaskState) => void };
 
 // Local storage key
 export const TASKS_STORAGE_KEY = 'usmode_tasks';
@@ -67,7 +69,7 @@ export const taskReducer = (state: TaskState, action: TaskAction): TaskState => 
     }
     
     case 'UNDO_COMPLETE_TASK': {
-      const taskId = action.payload;
+      const taskId = action.payload.id;
       const updatedTasks = state.tasks.map((task) => {
         if (task.id === taskId) {
           return {
@@ -101,7 +103,7 @@ export const taskReducer = (state: TaskState, action: TaskAction): TaskState => 
     case 'REMOVE_TASK':
       updatedState = {
         ...state,
-        tasks: state.tasks.filter((task) => task.id !== action.payload),
+        tasks: state.tasks.filter((task) => task.id !== action.payload.id),
       };
       break;
       
@@ -125,6 +127,11 @@ export const taskReducer = (state: TaskState, action: TaskAction): TaskState => 
         ),
       };
       break;
+      
+    case 'GET_STATE':
+      // Allow accessing the current state without modifying it
+      action.payload(state);
+      return state;
       
     default:
       return state;
