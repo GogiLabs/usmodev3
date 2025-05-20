@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +18,7 @@ export function useUserPoints() {
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   const fetchCounter = useRef(0);
   
-  const fetchUserPoints = useCallback(async () => {
+  const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
     
     // Increment counter each time fetch is called
@@ -46,7 +47,7 @@ export function useUserPoints() {
       const previousPoints = lastFetchedPoints.current;
       lastFetchedPoints.current = newPoints;
   
-      // Prevent initial animation trigger and only update if points actually changed
+      // Update points state, with special handling for different scenarios
       setPoints(prev => {
         // On first load, just set the points without triggering animations
         if (!initialized.current) {
@@ -55,8 +56,9 @@ export function useUserPoints() {
           return newPoints;
         }
         
-        // If points changed, return the new points to trigger re-render and animations
-        if (previousPoints === null || 
+        // If points changed or force update is requested, return new points to trigger re-render
+        if (forceUpdate || 
+            previousPoints === null || 
             previousPoints.available_points !== newPoints.available_points) {
           console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
           return { ...newPoints };
@@ -95,7 +97,7 @@ export function useUserPoints() {
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
         console.log('📣 [useUserPoints] Realtime update received:', payload);
-        fetchUserPoints();
+        fetchUserPoints(true); // Force update for realtime events
       })
       .subscribe();
     
@@ -110,7 +112,7 @@ export function useUserPoints() {
   // Create a wrapped refetch function with logging
   const refetch = useCallback(() => {
     console.log(`🔄 [useUserPoints] Manual refetch called`);
-    return fetchUserPoints();
+    return fetchUserPoints(true); // Force update on manual refetch
   }, [fetchUserPoints]);
   
   return { points, loading, error, refetch };

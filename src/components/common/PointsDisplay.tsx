@@ -1,3 +1,4 @@
+
 import { useUserPoints } from "@/hooks/use-user-points";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ interface PointsDisplayProps {
 }
 
 export function PointsDisplay({ className }: PointsDisplayProps) {
-  const { points, loading } = useUserPoints();
+  const { points, loading, refetch } = useUserPoints();
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastPoints, setLastPoints] = useState<number | null>(null);
   const [pointDelta, setPointDelta] = useState<number>(0);
@@ -27,6 +28,19 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   
   const { isAuthenticated } = useAuth();
 
+  // Periodically refresh points if authenticated to ensure we have latest data
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    // Refresh points every 30 seconds
+    const intervalId = setInterval(() => {
+      console.log(`🔄 [PointsDisplay] Periodic points refresh triggered`);
+      refetch();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, refetch]);
+
   // Calculate available points (safely handle case where points might be null)
   const earnedPoints = points?.earned_points || 0;
   const spentPoints = points?.spent_points || 0;
@@ -34,10 +48,15 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   
   // Compare current points with previous points whenever points update
   const compareAndAnimatePoints = useCallback(() => {
+    if (loading || !points) return;
+    
+    console.log(`🔍 [PointsDisplay] Checking for points changes. Current: ${availablePoints}, Previous ref: ${pointsRef.current}`);
+    
     // Skip initial load animation
     if (pointsRef.current === null) {
       pointsRef.current = availablePoints;
       setLastPoints(availablePoints);
+      console.log(`🏁 [PointsDisplay] Initial points set: ${availablePoints}`);
       return;
     }
     
@@ -51,7 +70,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
       setIsAnimating(true);
       setShowDelta(true);
       
-      console.log(`Points changed from ${pointsRef.current} to ${availablePoints} (delta: ${delta})`);
+      console.log(`📊 [PointsDisplay] Points changed from ${pointsRef.current} to ${availablePoints} (delta: ${delta})`);
       
       // Clear animations after delay
       if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
@@ -68,22 +87,20 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
       setLastPoints(availablePoints);
       pointsRef.current = availablePoints;
     }
-  }, [availablePoints]);
+  }, [availablePoints, loading, points]);
   
   // Detect changes in points to trigger animation
   useEffect(() => {
-    if (!loading && points) {
-      compareAndAnimatePoints();
-    }
+    compareAndAnimatePoints();
     
     // Cleanup function
     return () => {
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
       if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
     };
-  }, [loading, points, compareAndAnimatePoints]);
+  }, [points, compareAndAnimatePoints]);
 
-  if (loading) {
+  if (loading && !points) {
     return (
       <div className={cn(
         "flex items-center gap-2 bg-gradient-to-r from-gray-100 to-gray-50 px-4 py-2 rounded-full shadow-sm",
@@ -107,6 +124,10 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
           initial={{ scale: 1 }}
           animate={isAnimating ? { scale: [1, 1.08, 1] } : { scale: 1 }}
           transition={{ duration: 0.5 }}
+          onClick={() => {
+            console.log(`🖱️ [PointsDisplay] Points display clicked, triggering refetch`);
+            refetch();
+          }}
         >
           <div className="relative">
             <AnimatePresence>
@@ -162,6 +183,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
                 color: ['#9b87f5', '#ec4899', '#9b87f5']
               } : {}}
               transition={{ duration: 0.8 }}
+              key={availablePoints} // Force re-render when points change
             >
               {availablePoints}
             </motion.span>
@@ -216,6 +238,16 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
           {isAuthenticated && (
             <div className="text-xs text-muted-foreground mt-2">
               Points are earned individually when you complete tasks.
+              <button 
+                className="block w-full text-center mt-2 text-xs text-primary hover:text-primary/80"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  refetch();
+                }}
+              >
+                Refresh Points
+              </button>
             </div>
           )}
         </div>
