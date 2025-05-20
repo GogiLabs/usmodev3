@@ -3,7 +3,6 @@ import { ProfileSettings } from "./ProfileSettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { NetworkStatusIndicator } from "./NetworkStatusIndicator";
 import { NotificationCenter } from "./NotificationCenter";
-import { PointsDisplay } from "./PointsDisplay";
 
 export function Header() {
   const { isAuthenticated } = useAuth();
@@ -18,7 +17,6 @@ export function Header() {
       <div className="flex items-center gap-3">
         {isAuthenticated && (
           <>
-            <PointsDisplay />
             <NotificationCenter />
             <ProfileSettings />
           </>
