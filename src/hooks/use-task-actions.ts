@@ -57,7 +57,7 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
         console.error("❌ Error creating task:", error);
         
         // Remove the task from the local state if the DB operation failed
-        dispatch({ type: 'REMOVE_TASK', payload: newTask.id });
+        dispatch({ type: 'REMOVE_TASK', payload: { id: newTask.id } });
       }
     } else if (!isAuthenticated) {
       showAuthRequiredToast();
@@ -77,7 +77,10 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
       return;
     }
     
-    const task = dispatch((state: any) => state.tasks.find((t: Task) => t.id === id));
+    // Find the task to be completed
+    const tasks = dispatch((state: any) => state.tasks);
+    const task = tasks.find((t: Task) => t.id === id);
+    
     if (!task) {
       console.error(`❌ Task with ID ${id} not found`);
       return;
@@ -107,7 +110,7 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
         console.error("❌ Error completing task:", error);
         
         // Revert the completed status if the DB operation failed
-        dispatch({ type: 'UNDO_COMPLETE_TASK', payload: id });
+        dispatch({ type: 'UNDO_COMPLETE_TASK', payload: { id } });
         
         toast({
           title: "Error completing task",
@@ -132,7 +135,8 @@ export function useTaskActions(dispatch: React.Dispatch<any>) {
     }
     
     // Find the task to be deleted for showing in toast
-    const taskToDelete = dispatch((state: any) => state.tasks.find((t: Task) => t.id === id));
+    const tasks = dispatch((state: any) => state.tasks);
+    const taskToDelete = tasks.find((t: Task) => t.id === id);
     
     // Optimistically update UI
     dispatch({ type: 'DELETE_TASK', payload: { id } });
