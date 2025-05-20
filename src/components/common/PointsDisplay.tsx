@@ -1,8 +1,7 @@
-
 import { useUserPoints } from "@/hooks/use-user-points";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,6 +23,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const [showDelta, setShowDelta] = useState(false);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pointsRef = useRef<number | null>(null);
   
   const { isAuthenticated } = useAuth();
 
@@ -32,44 +32,48 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const spentPoints = points?.spent_points || 0;
   const availablePoints = points?.available_points || 0;
   
-  // Detect changes to trigger animation
-  useEffect(() => {
-    // Clear any existing timeouts to prevent memory leaks
-    if (animationTimeoutRef.current) {
-      clearTimeout(animationTimeoutRef.current);
-    }
-    if (deltaTimeoutRef.current) {
-      clearTimeout(deltaTimeoutRef.current);
-    }
-    
-    if (loading || lastPoints === null) {
+  // Compare current points with previous points whenever points update
+  const compareAndAnimatePoints = useCallback(() => {
+    // Skip initial load animation
+    if (pointsRef.current === null) {
+      pointsRef.current = availablePoints;
       setLastPoints(availablePoints);
       return;
     }
     
     // Only trigger animation if points actually changed
-    if (availablePoints !== lastPoints) {
+    if (availablePoints !== pointsRef.current) {
       // Calculate the delta
-      const delta = availablePoints - lastPoints;
+      const delta = availablePoints - pointsRef.current;
       
       // Update state to trigger animations
       setPointDelta(delta);
       setIsAnimating(true);
       setShowDelta(true);
       
-      console.log(`Points changed from ${lastPoints} to ${availablePoints} (delta: ${delta})`);
+      console.log(`Points changed from ${pointsRef.current} to ${availablePoints} (delta: ${delta})`);
       
       // Clear animations after delay
+      if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
       deltaTimeoutRef.current = setTimeout(() => {
         setShowDelta(false);
       }, 1500);
       
+      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
       animationTimeoutRef.current = setTimeout(() => {
         setIsAnimating(false);
       }, 1800);
       
-      // Update last points
+      // Update references
       setLastPoints(availablePoints);
+      pointsRef.current = availablePoints;
+    }
+  }, [availablePoints]);
+  
+  // Detect changes in points to trigger animation
+  useEffect(() => {
+    if (!loading && points) {
+      compareAndAnimatePoints();
     }
     
     // Cleanup function
@@ -77,14 +81,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
       if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
     };
-  }, [availablePoints, lastPoints, loading]);
-
-  // Set initial points value on first load
-  useEffect(() => {
-    if (!loading && lastPoints === null && points) {
-      setLastPoints(points.available_points);
-    }
-  }, [loading, points, lastPoints]);
+  }, [loading, points, compareAndAnimatePoints]);
 
   if (loading) {
     return (
