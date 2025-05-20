@@ -21,6 +21,7 @@ interface RewardContextType {
   loadingRewards: boolean;
   error: Error | null;
   refetchRewards: () => void;
+  refetchPoints: () => void;
 }
 
 const RewardContext = createContext<RewardContextType | undefined>(undefined);
@@ -33,7 +34,7 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
 
   const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
   const { toast } = useToast();
-  const { points } = useUserPoints();
+  const { points, refetch: refetchPoints } = useUserPoints();
   
   const { data: pair } = usePair();
   const { data: dbRewards, isLoading: dbRewardsLoading, error: dbRewardsError, refetch: refetchDbRewards } = useRewards(pair?.id);
@@ -176,6 +177,9 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
         const claimedReward = await rewardService.claimReward(id, user.id);
         console.log('✅ Reward claimed in database:', claimedReward);
         
+        // Refetch points to update the UI
+        refetchPoints();
+        
         sonnerToast.success("Reward claimed!", {
           description: `You've claimed: ${reward.description}`,
         });
@@ -250,7 +254,8 @@ export const RewardProvider = ({ children }: { children: ReactNode }) => {
         canClaimReward,
         loadingRewards,
         error,
-        refetchRewards
+        refetchRewards,
+        refetchPoints
       }}
     >
       {children}

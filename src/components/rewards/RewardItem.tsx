@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Reward } from "@/types/Reward";
 import { useReward } from "@/contexts/reward/RewardContext";
@@ -25,7 +24,7 @@ interface RewardItemProps {
 }
 
 export function RewardItem({ reward }: RewardItemProps) {
-  const { claimReward, deleteReward, canClaimReward } = useReward();
+  const { claimReward, deleteReward, canClaimReward, refetchPoints } = useReward();
   const { isAuthenticated, showAuthRequiredToast } = useAuth();
   const [isAnimating, setIsAnimating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -41,7 +40,7 @@ export function RewardItem({ reward }: RewardItemProps) {
     setIsDeleting(false);
   }, [reward.id]);
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     if (!isAuthenticated) {
       showAuthRequiredToast();
       return;
@@ -50,7 +49,10 @@ export function RewardItem({ reward }: RewardItemProps) {
     if (canClaim) {
       setIsAnimating(true);
       setShowConfetti(true);
-      claimReward(reward.id);
+      await claimReward(reward.id);
+      
+      // Make sure to refetch points after claiming a reward
+      refetchPoints();
       
       // Show success toast
       toast(`Reward Claimed!`, {
@@ -69,7 +71,7 @@ export function RewardItem({ reward }: RewardItemProps) {
     }
   };
   
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!isAuthenticated) {
       showAuthRequiredToast();
       return;
@@ -78,9 +80,12 @@ export function RewardItem({ reward }: RewardItemProps) {
     setIsDeleting(true);
     
     // Add small delay for animation
-    setTimeout(() => {
-      deleteReward(reward.id);
-    }, 300);
+    await deleteReward(reward.id);
+    
+    // If the reward was claimed, refetch points as deleting a claimed reward might affect points
+    if (reward.claimed) {
+      refetchPoints();
+    }
   };
 
   // Render for mobile devices

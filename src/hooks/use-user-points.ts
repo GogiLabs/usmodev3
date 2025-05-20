@@ -16,6 +16,53 @@ export function useUserPoints() {
   const initialized = useRef(false);
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   
+  const fetchUserPoints = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      // Call the get_user_points function to get user points summary
+      const { data, error } = await supabase
+        .rpc('get_user_points', { user_id_param: user.id });
+      
+      if (error) throw error;
+      
+      const newPoints: UserPoints = data && data.length > 0 ? data[0] : {
+        earned_points: 0,
+        spent_points: 0,
+        available_points: 0
+      };
+      
+      // Store the fetched points for comparison
+      const previousPoints = lastFetchedPoints.current;
+      lastFetchedPoints.current = newPoints;
+  
+      // Prevent initial animation trigger and only update if points actually changed
+      setPoints(prev => {
+        // On first load, just set the points without triggering animations
+        if (!initialized.current) {
+          initialized.current = true;
+          return newPoints;
+        }
+        
+        // If points changed, return the new points to trigger re-render and animations
+        if (previousPoints === null || 
+            previousPoints.available_points !== newPoints.available_points) {
+          return { ...newPoints };
+        }
+        
+        // No change, keep previous state
+        return prev;
+      });
+    } catch (err: any) {
+      console.error('Error fetching user points:', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) {
       setPoints(null);
@@ -23,51 +70,6 @@ export function useUserPoints() {
       return;
     }
 
-    const fetchUserPoints = async () => {
-      try {
-        setLoading(true);
-        
-        // Call the get_user_points function to get user points summary
-        const { data, error } = await supabase
-          .rpc('get_user_points', { user_id_param: user.id });
-        
-        if (error) throw error;
-        
-        const newPoints: UserPoints = data && data.length > 0 ? data[0] : {
-          earned_points: 0,
-          spent_points: 0,
-          available_points: 0
-        };
-        
-        // Store the fetched points for comparison
-        const previousPoints = lastFetchedPoints.current;
-        lastFetchedPoints.current = newPoints;
-    
-        // Prevent initial animation trigger and only update if points actually changed
-        setPoints(prev => {
-          // On first load, just set the points without triggering animations
-          if (!initialized.current) {
-            initialized.current = true;
-            return newPoints;
-          }
-          
-          // If points changed, return the new points to trigger re-render and animations
-          if (previousPoints === null || 
-              previousPoints.available_points !== newPoints.available_points) {
-            return { ...newPoints };
-          }
-          
-          // No change, keep previous state
-          return prev;
-        });
-      } catch (err: any) {
-        console.error('Error fetching user points:', err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchUserPoints();
     
     // Set up realtime subscription for point changes
@@ -88,5 +90,5 @@ export function useUserPoints() {
     };
   }, [user]);
   
-  return { points, loading, error };
+  return { points, loading, error, refetch: fetchUserPoints };
 }

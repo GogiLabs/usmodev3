@@ -29,7 +29,7 @@ export const mapAppTaskToDbTask = (task: Omit<Task, 'id' | 'completed' | 'create
   };
 };
 
-export const useTaskService = (pairId?: string) => {
+export const useTaskService = (pairId?: string, onPointsUpdate?: () => void) => {
   const { softDelete } = useSoftDelete("tasks");
   const { toast } = useToast();
 
@@ -68,6 +68,12 @@ export const useTaskService = (pairId?: string) => {
         .single();
       
       if (error) throw error;
+      
+      // Call the callback if it exists to update points
+      if (onPointsUpdate) {
+        onPointsUpdate();
+      }
+      
       return mapDbTaskToAppTask(data);
     } catch (error: any) {
       console.error("Error completing task:", error);

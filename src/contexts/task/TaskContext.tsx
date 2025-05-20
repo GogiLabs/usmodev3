@@ -14,6 +14,7 @@ interface TaskContextType {
   loadingTasks: boolean;
   error: Error | null;
   refetchTasks: () => void;
+  refetchPoints: () => void;
 }
 
 export const TaskContext = createContext<TaskContextType | undefined>(undefined);
