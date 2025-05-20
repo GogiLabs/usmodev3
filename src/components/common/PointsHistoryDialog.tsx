@@ -14,26 +14,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, isToday, isYesterday } from "date-fns";
 import { Award, CheckCircle, ShoppingBag } from "lucide-react";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { useUserPointsHistory, PointsHistoryItem } from "@/hooks/use-user-points-history";
+import { useUserPointsHistory } from "@/hooks/use-user-points-history";
 
 export function PointsHistoryDialog() {
   const [open, setOpen] = useState(false);
   const { history, loading } = useUserPointsHistory();
   
-  const formatDate = (date: string) => {
-    const dateObj = new Date(date);
-    if (isToday(dateObj)) {
-      return `Today, ${format(dateObj, 'h:mm a')}`;
-    } else if (isYesterday(dateObj)) {
-      return `Yesterday, ${format(dateObj, 'h:mm a')}`;
+  const formatDate = (date: Date) => {
+    if (isToday(date)) {
+      return `Today, ${format(date, 'h:mm a')}`;
+    } else if (isYesterday(date)) {
+      return `Yesterday, ${format(date, 'h:mm a')}`;
     } else {
-      return format(dateObj, 'MMM d, yyyy');
+      return format(date, 'MMM d, yyyy');
     }
   };
   
-  // Filter points by source
-  const taskPoints = history.filter(item => item.source_type === 'task');
-  const rewardPoints = history.filter(item => item.source_type === 'reward');
+  // Filter points by type
+  const taskPoints = history.filter(item => item.type === 'task_completion');
+  const rewardPoints = history.filter(item => item.type === 'reward_claim');
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -68,12 +67,12 @@ export function PointsHistoryDialog() {
                     <div key={item.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.task ? item.task.description : "Task"}</p>
+                        <p className="font-medium truncate">{item.description}</p>
                         <div className="text-xs text-muted-foreground">
-                          <span>{formatDate(item.created_at)}</span>
+                          <span>{formatDate(item.timestamp)}</span>
                         </div>
                       </div>
-                      <span className="text-green-600 font-semibold">+{item.amount}</span>
+                      <span className="text-green-600 font-semibold">+{item.points}</span>
                     </div>
                   ))}
                 </div>
@@ -99,12 +98,12 @@ export function PointsHistoryDialog() {
                     <div key={item.id} className="flex items-start gap-2 border-b pb-2 last:border-b-0">
                       <ShoppingBag className="h-5 w-5 text-amber-500 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.reward ? item.reward.description : "Reward"}</p>
+                        <p className="font-medium truncate">{item.description}</p>
                         <div className="text-xs text-muted-foreground">
-                          <span>{formatDate(item.created_at)}</span>
+                          <span>{formatDate(item.timestamp)}</span>
                         </div>
                       </div>
-                      <span className="text-red-600 font-semibold">{item.amount}</span>
+                      <span className="text-red-600 font-semibold">{item.points}</span>
                     </div>
                   ))}
                 </div>

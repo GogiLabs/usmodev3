@@ -1,25 +1,15 @@
-// Fix the TypeScript errors related to possibly null item.task and item.reward
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface PointHistoryItem {
+export interface PointHistoryItem {
   id: string;
   type: 'task_completion' | 'reward_claim' | 'unknown';
   description: string;
   points: number;
   timestamp: Date;
   date: string;
-}
-
-interface DatabasePointHistoryItem {
-  id: string;
-  created_at: string;
-  user_id: string;
-  amount: number;
-  source_type: string;
-  task: { description: string } | null;
-  reward: { description: string } | null;
 }
 
 const formatDate = (date: Date): string => {
@@ -51,49 +41,41 @@ export function useUserPointsHistory() {
       try {
         setLoading(true);
 
-        const { data: historyData, error: historyError } = await supabase
-          .from('user_points_history')
+        // Query user_points table instead of non-existent user_points_history table
+        const { data: pointsData, error: pointsError } = await supabase
+          .from('user_points')
           .select(`
             id,
-            created_at,
-            user_id,
             amount,
             source_type,
-            task:task_id ( description ),
-            reward:reward_id ( description )
+            source_id,
+            created_at,
+            task:tasks!source_id(description),
+            reward:rewards!source_id(description)
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (historyError) throw historyError;
+        if (pointsError) throw pointsError;
 
-        if (historyData) {
-          const processedItems = historyData.map(item => {
+        if (pointsData) {
+          const processedItems: PointHistoryItem[] = pointsData.map(item => {
             const timestamp = new Date(item.created_at);
             
             // For task completions
             if (item.source_type === 'task') {
-              // Check if task exists and is a proper object and not an error
-              if (item.task && typeof item.task === 'object' && !hasErrorProperty(item.task)) {
-                const description = item.task?.description;
-                
-                if (description) {
-                  return {
-                    id: item.id,
-                    type: 'task_completion',
-                    description: description,
-                    points: item.amount,
-                    timestamp,
-                    date: formatDate(timestamp),
-                  };
-                }
-              }
+              // Check if task exists and has description
+              const taskDescription = item.task && 
+                typeof item.task === 'object' && 
+                !hasErrorProperty(item.task) && 
+                item.task.description ? 
+                item.task.description : 
+                'Task completion';
               
-              // Fallback if task data is not available
               return {
                 id: item.id,
                 type: 'task_completion',
-                description: 'Task completion',
+                description: taskDescription,
                 points: item.amount,
                 timestamp,
                 date: formatDate(timestamp),
@@ -102,28 +84,19 @@ export function useUserPointsHistory() {
             
             // For reward claims
             if (item.source_type === 'reward') {
-              // Check if reward exists and is a proper object and not an error
-              if (item.reward && typeof item.reward === 'object' && !hasErrorProperty(item.reward)) {
-                const description = item.reward?.description;
-                
-                if (description) {
-                  return {
-                    id: item.id,
-                    type: 'reward_claim',
-                    description: description,
-                    points: item.amount, // Negative value
-                    timestamp,
-                    date: formatDate(timestamp),
-                  };
-                }
-              }
+              // Check if reward exists and has description
+              const rewardDescription = item.reward && 
+                typeof item.reward === 'object' && 
+                !hasErrorProperty(item.reward) && 
+                item.reward.description ? 
+                item.reward.description : 
+                'Reward claim';
               
-              // Fallback if reward data is not available
               return {
                 id: item.id,
                 type: 'reward_claim',
-                description: 'Reward claim',
-                points: item.amount,
+                description: rewardDescription,
+                points: item.amount, // Negative value
                 timestamp,
                 date: formatDate(timestamp),
               };
@@ -151,14 +124,14 @@ export function useUserPointsHistory() {
     };
 
     fetchPointsHistory();
-
-    // Set up realtime subscription for history changes (optional)
+    
+    // Set up realtime subscription for history changes
     const channel = supabase
-      .channel('user_points_history_changes')
+      .channel('user_points_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'user_points_history',
+        table: 'user_points',
         filter: `user_id=eq.${user.id}`,
       }, (payload) => {
         console.log('Change received!', payload);
