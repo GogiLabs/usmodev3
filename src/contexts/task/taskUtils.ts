@@ -32,6 +32,20 @@ export const createTaskWithDefaults = (
   };
 };
 
+// Default tag colors mapping - matches the one in initialTaskState
+const defaultTagColors: Record<TaskTag, string> = {
+  'Cleaning': 'bg-blue-100 text-blue-800',
+  'Cooking': 'bg-orange-100 text-orange-800',
+  'Laundry': 'bg-purple-100 text-purple-800',
+  'Dishes': 'bg-cyan-100 text-cyan-800',
+  'GroceryShopping': 'bg-green-100 text-green-800',
+  'BillsAndFinances': 'bg-amber-100 text-amber-800',
+  'RepairsAndMaintenance': 'bg-stone-100 text-stone-800',
+  'PetCare': 'bg-pink-100 text-pink-800',
+  'Gardening': 'bg-emerald-100 text-emerald-800',
+  'Other': 'bg-gray-100 text-gray-800',
+};
+
 // Initialize state from localStorage or with default values
 export const initializeTaskState = (): TaskState => {
   const storedState = localStorage.getItem(TASKS_STORAGE_KEY);
@@ -50,6 +64,8 @@ export const initializeTaskState = (): TaskState => {
       return {
         ...parsedState,
         tasks: tasksWithDates,
+        // Make sure tagColors exists in restored state, if not use default
+        tagColors: parsedState.tagColors || defaultTagColors
       };
     } catch (error) {
       console.error('Error parsing stored tasks:', error);
@@ -85,5 +101,6 @@ export const initializeTaskState = (): TaskState => {
       },
     ],
     earnedPoints: 0,
+    tagColors: defaultTagColors,
   };
 };
