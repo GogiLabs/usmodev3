@@ -54,74 +54,96 @@ export function useUserPointsHistory() {
             amount,
             source_type,
             source_id,
-            created_at,
-            task:tasks!source_id(description),
-            reward:rewards!source_id(description)
+            created_at
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (pointsError) throw pointsError;
 
+        // Fetch related task and reward data separately to avoid relation errors
+        const processedItems: PointHistoryItem[] = [];
+        
         if (pointsData) {
-          const processedItems: PointHistoryItem[] = pointsData.map(item => {
+          // Create a map to store task descriptions
+          const taskIds = pointsData
+            .filter(item => item.source_type === 'task')
+            .map(item => item.source_id);
+          
+          const rewardIds = pointsData
+            .filter(item => item.source_type === 'reward')
+            .map(item => item.source_id);
+          
+          // Fetch task descriptions if needed
+          let taskDescriptions: Record<string, string> = {};
+          if (taskIds.length > 0) {
+            const { data: tasksData } = await supabase
+              .from('tasks')
+              .select('id, description')
+              .in('id', taskIds);
+              
+            if (tasksData) {
+              taskDescriptions = tasksData.reduce((acc, task) => ({
+                ...acc,
+                [task.id]: task.description
+              }), {});
+            }
+          }
+          
+          // Fetch reward descriptions if needed
+          let rewardDescriptions: Record<string, string> = {};
+          if (rewardIds.length > 0) {
+            const { data: rewardsData } = await supabase
+              .from('rewards')
+              .select('id, description')
+              .in('id', rewardIds);
+              
+            if (rewardsData) {
+              rewardDescriptions = rewardsData.reduce((acc, reward) => ({
+                ...acc,
+                [reward.id]: reward.description
+              }), {});
+            }
+          }
+          
+          // Process all items with the descriptions we've fetched
+          for (const item of pointsData) {
             const timestamp = new Date(item.created_at);
             
-            // For task completions
             if (item.source_type === 'task') {
-              // Safe type checking for task description
-              let taskDescription = 'Task completion';
-              
-              if (isNonNullObject(item.task) && !hasErrorProperty(item.task)) {
-                taskDescription = typeof item.task.description === 'string' 
-                  ? item.task.description 
-                  : 'Task completion';
-              }
-              
-              return {
+              const taskDescription = taskDescriptions[item.source_id] || 'Task completion';
+              processedItems.push({
                 id: item.id,
                 type: 'task_completion',
                 description: taskDescription,
                 points: item.amount,
                 timestamp,
                 date: formatDate(timestamp),
-              };
-            }
-            
-            // For reward claims
-            if (item.source_type === 'reward') {
-              // Safe type checking for reward description
-              let rewardDescription = 'Reward claim';
-              
-              if (isNonNullObject(item.reward) && !hasErrorProperty(item.reward)) {
-                rewardDescription = typeof item.reward.description === 'string'
-                  ? item.reward.description
-                  : 'Reward claim';
-              }
-              
-              return {
+              });
+            } else if (item.source_type === 'reward') {
+              const rewardDescription = rewardDescriptions[item.source_id] || 'Reward claim';
+              processedItems.push({
                 id: item.id,
                 type: 'reward_claim',
                 description: rewardDescription,
-                points: item.amount, // Negative value
+                points: item.amount,
                 timestamp,
                 date: formatDate(timestamp),
-              };
+              });
+            } else {
+              processedItems.push({
+                id: item.id,
+                type: 'unknown',
+                description: `Point change (${item.source_type})`,
+                points: item.amount,
+                timestamp,
+                date: formatDate(timestamp),
+              });
             }
-            
-            // For unknown types
-            return {
-              id: item.id,
-              type: 'unknown',
-              description: `Point change (${item.source_type})`,
-              points: item.amount,
-              timestamp,
-              date: formatDate(timestamp),
-            };
-          });
-
-          setHistory(processedItems);
+          }
         }
+
+        setHistory(processedItems);
       } catch (err: any) {
         console.error('Error fetching user points history:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
