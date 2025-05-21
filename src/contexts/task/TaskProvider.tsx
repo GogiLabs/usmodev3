@@ -147,11 +147,9 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('✅ [TaskProvider] Task marked as completed in database');
         
         // Points will be updated via the real-time subscription
-        // We'll trigger refetch as a backup but with lower priority
-        setTimeout(() => {
-          console.log('🔄 [TaskProvider] Backup refetch after task completion');
-          refetchPoints();
-        }, 500);
+        // Call refetchPoints immediately after task completion to ensure points update is triggered fast
+        console.log('🔄 [TaskProvider] Explicitly refetching points after task completion');
+        await optimizedRefetchPoints();
         
         const taskCompletionDuration = (performance.now() - startTime).toFixed(2);
         console.log(`⏱️ [TaskProvider] Task completion flow took ${taskCompletionDuration}ms`);
@@ -232,7 +230,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   
-  // Get a color for a task tag (moved from getTagColor function to use the utility)
+  // Get a color for a task tag
   const getTagColor = useCallback((tag: TaskTag): string => {
     return state.tagColors[tag] || "bg-gray-100 text-gray-800";
   }, [state.tagColors]);

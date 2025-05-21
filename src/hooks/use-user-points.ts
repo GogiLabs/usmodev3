@@ -18,6 +18,7 @@ export function useUserPoints() {
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   const fetchCounter = useRef(0);
   const lastRealTimeUpdateTime = useRef<number>(0);
+  const pointsUpdateListeners = useRef<Array<(points: UserPoints) => void>>([]);
   
   const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
@@ -55,6 +56,9 @@ export function useUserPoints() {
         console.log(`⚡ [useUserPoints] Force updating points from ${previousPoints?.available_points} to ${newPoints.available_points}`);
         setPoints({...newPoints}); // Create new object to ensure React detects the change
         initialized.current = true;
+        
+        // Notify listeners about the points update
+        pointsUpdateListeners.current.forEach(listener => listener(newPoints));
         return;
       }
       
@@ -71,6 +75,10 @@ export function useUserPoints() {
         if (previousPoints === null || 
             previousPoints.available_points !== newPoints.available_points) {
           console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
+          
+          // Notify listeners about the points update
+          pointsUpdateListeners.current.forEach(listener => listener(newPoints));
+          
           return { ...newPoints };
         }
         
@@ -94,6 +102,23 @@ export function useUserPoints() {
     // Force immediate update for realtime events with highest priority
     return fetchUserPoints(true);
   }, [fetchUserPoints]);
+
+  // Add a new subscribe method to listen for points updates
+  const subscribeToPointsUpdates = useCallback((callback: (points: UserPoints) => void) => {
+    console.log(`➕ [useUserPoints] Adding points update listener`);
+    pointsUpdateListeners.current.push(callback);
+    
+    // If we already have points, call the callback immediately
+    if (points) {
+      callback(points);
+    }
+    
+    // Return unsubscribe function
+    return () => {
+      console.log(`➖ [useUserPoints] Removing points update listener`);
+      pointsUpdateListeners.current = pointsUpdateListeners.current.filter(cb => cb !== callback);
+    };
+  }, [points]);
 
   useEffect(() => {
     console.log(`🔍 [useUserPoints] Hook initialized/updated with user:`, user?.id);
@@ -142,6 +167,7 @@ export function useUserPoints() {
     error, 
     refetch, 
     getLastRealtimeUpdateTime,
-    lastRealtimeUpdateTime: lastRealTimeUpdateTime.current
+    lastRealtimeUpdateTime: lastRealTimeUpdateTime.current,
+    subscribeToPointsUpdates
   };
 }

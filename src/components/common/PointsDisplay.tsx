@@ -1,4 +1,3 @@
-
 import { useUserPoints } from "@/hooks/use-user-points";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +16,7 @@ interface PointsDisplayProps {
 }
 
 export function PointsDisplay({ className }: PointsDisplayProps) {
-  const { points, loading, refetch, lastRealtimeUpdateTime } = useUserPoints();
+  const { points, loading, refetch, lastRealtimeUpdateTime, subscribeToPointsUpdates } = useUserPoints();
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastPoints, setLastPoints] = useState<number | null>(null);
   const [pointDelta, setPointDelta] = useState<number>(0);
@@ -25,9 +24,6 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pointsRef = useRef<number | null>(null);
-  const lastUpdateTimeRef = useRef<number>(0);
-  const lastRealTimeUpdateRef = useRef<number>(0);
-  const pendingAnimationRef = useRef<boolean>(false);
   
   const { isAuthenticated } = useAuth();
 
@@ -35,36 +31,28 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const earnedPoints = points?.earned_points || 0;
   const spentPoints = points?.spent_points || 0;
   const availablePoints = points?.available_points || 0;
-
-  // Immediately animate when there's a realtime update
+  
   useEffect(() => {
-    // Skip initial render
-    if (lastRealTimeUpdateRef.current === 0 && lastRealtimeUpdateTime === 0) {
-      lastRealTimeUpdateRef.current = lastRealtimeUpdateTime;
+    // Initialize pointsRef on first render
+    if (pointsRef.current === null && points) {
+      console.log(`🏁 [PointsDisplay] Initial points set to ${points.available_points}`);
+      pointsRef.current = points.available_points;
+      setLastPoints(points.available_points);
+    }
+  }, [points]);
+
+  // Function to trigger animation
+  const animatePointsChange = useCallback((newPoints: number, previousPoints: number) => {
+    const delta = newPoints - previousPoints;
+    
+    // Don't animate if there's no change
+    if (delta === 0) {
+      console.log(`🔍 [PointsDisplay] No points change detected, skipping animation`);
       return;
     }
     
-    // Check if this is a new realtime update
-    if (lastRealtimeUpdateTime > lastRealTimeUpdateRef.current && pointsRef.current !== null) {
-      console.log(`⚡ [PointsDisplay] Detected realtime update at ${lastRealtimeUpdateTime}, triggering immediate animation`);
-      
-      const currentPoints = points?.available_points || 0;
-      const delta = currentPoints - (pointsRef.current || 0);
-      
-      console.log(`🎯 [PointsDisplay] Real-time animation: ${pointsRef.current} -> ${currentPoints} (delta: ${delta})`);
-      
-      // Mark that we've processed this update
-      lastRealTimeUpdateRef.current = lastRealtimeUpdateTime;
-      
-      // Only animate if there's an actual points change
-      if (delta !== 0) {
-        animatePointsChange(currentPoints, delta);
-      }
-    }
-  }, [lastRealtimeUpdateTime, points?.available_points]);
-  
-  // Function to trigger animation
-  const animatePointsChange = useCallback((newPoints: number, delta: number) => {
+    console.log(`✨ [PointsDisplay] Triggering animation: points ${previousPoints} -> ${newPoints}, delta ${delta}`);
+    
     // Clear any pending animations
     if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
     if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
@@ -73,9 +61,6 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
     setPointDelta(delta);
     setIsAnimating(true);
     setShowDelta(true);
-    lastUpdateTimeRef.current = Date.now();
-    
-    console.log(`✨ [PointsDisplay] Triggering animation: points ${pointsRef.current} -> ${newPoints}, delta ${delta}`);
     
     // Clear animations after delay
     deltaTimeoutRef.current = setTimeout(() => {
@@ -84,43 +69,40 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
     
     animationTimeoutRef.current = setTimeout(() => {
       setIsAnimating(false);
-      pendingAnimationRef.current = false;
     }, 1800);
     
     // Update references
     setLastPoints(newPoints);
     pointsRef.current = newPoints;
-    pendingAnimationRef.current = true;
   }, []);
   
-  // Monitor points changes
+  // Subscribe to points updates from useUserPoints
   useEffect(() => {
-    if (!loading && points) {
-      const currentPoints = points.available_points;
-      const now = Date.now();
+    if (!isAuthenticated) return;
+    
+    console.log(`🔌 [PointsDisplay] Setting up points update subscription`);
+    
+    const unsubscribe = subscribeToPointsUpdates((newPoints) => {
+      const currentPointsRef = pointsRef.current ?? 0;
+      const newPointsValue = newPoints.available_points;
       
-      console.log(`🔍 [PointsDisplay] Checking points update - current: ${currentPoints}, ref: ${pointsRef.current}, pending animation: ${pendingAnimationRef.current}`);
+      console.log(`📊 [PointsDisplay] Points update received: ${currentPointsRef} -> ${newPointsValue}`);
       
-      // Skip initial load animation
-      if (pointsRef.current === null) {
-        console.log(`🏁 [PointsDisplay] Initial points set to ${currentPoints}`);
-        pointsRef.current = currentPoints;
-        setLastPoints(currentPoints);
-        return;
+      if (currentPointsRef !== newPointsValue) {
+        animatePointsChange(newPointsValue, currentPointsRef);
       }
-      
-      // If points changed and no animation is pending
-      if (currentPoints !== pointsRef.current && !pendingAnimationRef.current) {
-        // Only animate if it's been at least 300ms since last animation
-        // This prevents multiple animations firing too close together
-        if (now - lastUpdateTimeRef.current > 300) {
-          const delta = currentPoints - pointsRef.current;
-          console.log(`📊 [PointsDisplay] Normal update: Points changed from ${pointsRef.current} to ${currentPoints} (delta: ${delta})`);
-          animatePointsChange(currentPoints, delta);
-        }
-      }
+    });
+    
+    return unsubscribe;
+  }, [isAuthenticated, subscribeToPointsUpdates, animatePointsChange]);
+  
+  // Add immediate effect to explicitly handle changes in points
+  useEffect(() => {
+    if (points && pointsRef.current !== null && points.available_points !== pointsRef.current) {
+      console.log(`🔄 [PointsDisplay] Detected points change via props: ${pointsRef.current} -> ${points.available_points}`);
+      animatePointsChange(points.available_points, pointsRef.current);
     }
-  }, [loading, points, animatePointsChange]);
+  }, [points?.available_points, animatePointsChange]);
   
   // Periodically refresh points if authenticated to ensure we have latest data
   useEffect(() => {
@@ -173,6 +155,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
           animate={isAnimating ? { scale: [1, 1.08, 1] } : { scale: 1 }}
           transition={{ duration: 0.5 }}
           onClick={handleManualRefresh}
+          data-testid="points-display"
         >
           <div className="relative">
             <AnimatePresence>

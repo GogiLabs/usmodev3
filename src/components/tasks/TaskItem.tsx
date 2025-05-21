@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
@@ -15,7 +14,7 @@ interface TaskItemProps {
 }
 
 export function TaskItem({ task }: TaskItemProps) {
-  const { completeTask, deleteTask, getTagColor, refetchPoints } = useTask();
+  const { completeTask, deleteTask, getTagColor } = useTask();
   const { isAuthenticated, showAuthRequiredToast } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -40,8 +39,7 @@ export function TaskItem({ task }: TaskItemProps) {
         const completionDuration = (performance.now() - taskCompletionTimeRef.current).toFixed(2);
         console.log(`✅ [TaskItem] Task completed: ${task.id} in ${completionDuration}ms`);
         
-        // No need to manually refetch points as we're now using the realtime updates
-        // That should make the points update immediately
+        // No need for manual refetch as we're using the event-based system now
       } catch (error) {
         console.error(`❌ [TaskItem] Error completing task:`, error);
       } finally {
@@ -65,13 +63,7 @@ export function TaskItem({ task }: TaskItemProps) {
       await deleteTask(task.id);
       console.log(`✅ [TaskItem] Task deleted: ${task.id}`);
       
-      // If the task was completed, we should also refetch points 
-      // since deleting a completed task might affect points
-      if (task.completed) {
-        console.log(`🔄 [TaskItem] Calling refetchPoints after deleting completed task`);
-        await refetchPoints();
-        console.log(`✅ [TaskItem] Points refetched after task deletion`);
-      }
+      // Deletion is now handled properly via event system
     } catch (error: any) {
       console.error(`❌ [TaskItem] Error deleting task:`, error);
       setIsDeleting(false);
