@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
@@ -8,6 +9,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { useUserPoints } from "@/hooks/use-user-points";
 
 interface TaskItemProps {
   task: Task;
@@ -22,6 +24,7 @@ export function TaskItem({ task }: TaskItemProps) {
   const { toast } = useToast();
   const componentRef = useRef<HTMLDivElement>(null);
   const taskCompletionTimeRef = useRef<number>(0);
+  const { points, refetch: refetchPoints } = useUserPoints();
   
   const handleComplete = async () => {
     if (!isAuthenticated) {
@@ -34,12 +37,24 @@ export function TaskItem({ task }: TaskItemProps) {
       console.log(`🎯 [TaskItem] Starting task completion for task: ${task.id}`);
       setIsCompleting(true);
       
+      // Store current points for animation calculation
+      const currentPoints = points?.available_points || 0;
+      const earnedPoints = task.points;
+      console.log(`🎮 [TaskItem] Current points: ${currentPoints}, Task will add: ${earnedPoints} points`);
+      
       try {
+        // Optimistically update UI by immediately triggering points animation
+        // This happens BEFORE the actual database operation completes
+        setTimeout(() => {
+          console.log(`⚡ [TaskItem] Pre-emptively triggering points animation: ${currentPoints} -> ${currentPoints + earnedPoints}`);
+          // Force a points refetch to show animation immediately
+          refetchPoints();
+        }, 50);
+        
         await completeTask(task.id);
         const completionDuration = (performance.now() - taskCompletionTimeRef.current).toFixed(2);
         console.log(`✅ [TaskItem] Task completed: ${task.id} in ${completionDuration}ms`);
         
-        // No need for manual refetch as we're using the event-based system now
       } catch (error) {
         console.error(`❌ [TaskItem] Error completing task:`, error);
       } finally {

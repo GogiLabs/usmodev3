@@ -1,3 +1,4 @@
+
 import { useUserPoints } from "@/hooks/use-user-points";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pointsRef = useRef<number | null>(null);
+  const animationPendingRef = useRef<boolean>(false);
   
   const { isAuthenticated } = useAuth();
 
@@ -57,6 +59,9 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
     if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
     if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
     
+    // Reset animation pending flag
+    animationPendingRef.current = false;
+    
     // Set animation states
     setPointDelta(delta);
     setIsAnimating(true);
@@ -76,7 +81,7 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
     pointsRef.current = newPoints;
   }, []);
   
-  // Subscribe to points updates from useUserPoints
+  // More responsive subscription to points updates
   useEffect(() => {
     if (!isAuthenticated) return;
     
@@ -89,33 +94,24 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
       console.log(`📊 [PointsDisplay] Points update received: ${currentPointsRef} -> ${newPointsValue}`);
       
       if (currentPointsRef !== newPointsValue) {
-        animatePointsChange(newPointsValue, currentPointsRef);
+        // Suppress multiple animations that happen too quickly
+        if (!animationPendingRef.current) {
+          animationPendingRef.current = true;
+          
+          // Use requestAnimationFrame for smoother animation timing
+          requestAnimationFrame(() => {
+            animatePointsChange(newPointsValue, currentPointsRef);
+          });
+        } else {
+          console.log(`🔄 [PointsDisplay] Animation already pending, updating final target to: ${newPointsValue}`);
+          // Just update the reference for next animation
+          pointsRef.current = newPointsValue;
+        }
       }
     });
     
     return unsubscribe;
   }, [isAuthenticated, subscribeToPointsUpdates, animatePointsChange]);
-  
-  // Add immediate effect to explicitly handle changes in points
-  useEffect(() => {
-    if (points && pointsRef.current !== null && points.available_points !== pointsRef.current) {
-      console.log(`🔄 [PointsDisplay] Detected points change via props: ${pointsRef.current} -> ${points.available_points}`);
-      animatePointsChange(points.available_points, pointsRef.current);
-    }
-  }, [points?.available_points, animatePointsChange]);
-  
-  // Periodically refresh points if authenticated to ensure we have latest data
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    
-    // Refresh points every 30 seconds
-    const intervalId = setInterval(() => {
-      console.log(`🔄 [PointsDisplay] Periodic points refresh triggered`);
-      refetch();
-    }, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, [isAuthenticated, refetch]);
   
   // Cleanup function
   useEffect(() => {

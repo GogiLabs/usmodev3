@@ -1,3 +1,4 @@
+
 import React, { useReducer, useEffect, useState, useCallback } from 'react';
 import { TaskContext } from './TaskContext';
 import { taskReducer, initialTaskState } from './taskReducer';
@@ -19,7 +20,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, user, showAuthRequiredToast } = useAuth();
   const { isPaired, pairData, loading: pairLoading } = usePairStatus();
   const { tasks, loading: tasksLoading, error: tasksError, refetchTasks } = useTasks();
-  const { points, refetch: refetchPoints } = useUserPoints();
+  const { points, refetch: refetchPoints, updatePointsOptimistically } = useUserPoints();
   const { toast } = useToast();
   
   console.log(`🔄 [TaskProvider] Initializing/updating provider. isPaired: ${isPaired}, hasUser: ${!!user}`);
@@ -140,13 +141,16 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     // Optimistically update UI
     dispatch({ type: 'COMPLETE_TASK', payload: { id, userId: user?.id } });
     
+    // Optimistically update points display immediately
+    // This provides immediate visual feedback to user
+    updatePointsOptimistically(task.points);
+    
     if (isAuthenticated && isPaired && user) {
       try {
         console.log('🔄 [TaskProvider] Marking task as completed in database:', id);
         await taskService.completeTask(id, user.id);
         console.log('✅ [TaskProvider] Task marked as completed in database');
         
-        // Points will be updated via the real-time subscription
         // Call refetchPoints immediately after task completion to ensure points update is triggered fast
         console.log('🔄 [TaskProvider] Explicitly refetching points after task completion');
         await optimizedRefetchPoints();
@@ -157,6 +161,12 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         sonnerToast.success("Task completed!", {
           description: `You earned ${task.points} points`,
         });
+        
+        // Add a backup refetch with delay to ensure UI is updated
+        setTimeout(() => {
+          console.log('🔄 [TaskProvider] Backup refetch after task completion');
+          refetchPoints();
+        }, 1000);
       } catch (error: any) {
         console.error("❌ [TaskProvider] Error completing task:", error);
         
@@ -199,7 +209,8 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (taskToDelete && taskToDelete.completed) {
           console.log('🔄 [TaskProvider] Refetching points after deleting completed task');
-          // Points will be updated via real-time; this is just a backup
+          // If task was completed, we need to update points
+          updatePointsOptimistically(-taskToDelete.points);
           await refetchPoints();
           console.log('✅ [TaskProvider] Points refetched after task deletion');
         }

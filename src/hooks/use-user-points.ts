@@ -19,6 +19,7 @@ export function useUserPoints() {
   const fetchCounter = useRef(0);
   const lastRealTimeUpdateTime = useRef<number>(0);
   const pointsUpdateListeners = useRef<Array<(points: UserPoints) => void>>([]);
+  const optimisticUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
   
   const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
@@ -58,7 +59,14 @@ export function useUserPoints() {
         initialized.current = true;
         
         // Notify listeners about the points update
-        pointsUpdateListeners.current.forEach(listener => listener(newPoints));
+        console.log(`🔔 [useUserPoints] Notifying ${pointsUpdateListeners.current.length} listeners of points update`);
+        pointsUpdateListeners.current.forEach(listener => {
+          try {
+            listener(newPoints);
+          } catch (err) {
+            console.error('[useUserPoints] Error in listener:', err);
+          }
+        });
         return;
       }
       
@@ -77,7 +85,14 @@ export function useUserPoints() {
           console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
           
           // Notify listeners about the points update
-          pointsUpdateListeners.current.forEach(listener => listener(newPoints));
+          console.log(`🔔 [useUserPoints] Notifying ${pointsUpdateListeners.current.length} listeners of points update`);
+          pointsUpdateListeners.current.forEach(listener => {
+            try {
+              listener(newPoints);
+            } catch (err) {
+              console.error('[useUserPoints] Error in listener:', err);
+            }
+          });
           
           return { ...newPoints };
         }
@@ -93,6 +108,44 @@ export function useUserPoints() {
       setLoading(false);
     }
   }, [user]);
+  
+  // Add a method to update points optimistically (before DB confirms)
+  const updatePointsOptimistically = useCallback((pointDelta: number) => {
+    if (!points) return;
+    
+    console.log(`🔮 [useUserPoints] Optimistically updating points by ${pointDelta}`);
+    
+    // Clear any existing timeout to prevent race conditions
+    if (optimisticUpdateTimeout.current) {
+      clearTimeout(optimisticUpdateTimeout.current);
+    }
+    
+    const newPoints = {
+      ...points,
+      earned_points: pointDelta > 0 ? points.earned_points + pointDelta : points.earned_points,
+      spent_points: pointDelta < 0 ? points.spent_points - pointDelta : points.spent_points,
+      available_points: points.available_points + pointDelta
+    };
+    
+    // Update state immediately for responsive UI
+    setPoints(newPoints);
+    
+    // Notify listeners about the optimistic update
+    console.log(`🔔 [useUserPoints] Notifying listeners of optimistic points update`);
+    pointsUpdateListeners.current.forEach(listener => {
+      try {
+        listener(newPoints);
+      } catch (err) {
+        console.error('[useUserPoints] Error in listener during optimistic update:', err);
+      }
+    });
+    
+    // Schedule a real fetch after a short delay to ensure we have the right data
+    optimisticUpdateTimeout.current = setTimeout(() => {
+      fetchUserPoints(true);
+    }, 500);
+    
+  }, [points, fetchUserPoints]);
 
   const handleRealtimeUpdate = useCallback((payload: any) => {
     console.log('📣 [useUserPoints] Realtime update received:', payload);
@@ -110,6 +163,7 @@ export function useUserPoints() {
     
     // If we already have points, call the callback immediately
     if (points) {
+      console.log(`🔄 [useUserPoints] Initial points callback with existing data:`, points);
       callback(points);
     }
     
@@ -145,6 +199,9 @@ export function useUserPoints() {
     console.log(`🎧 [useUserPoints] Subscribed to realtime updates for user ${user.id}`);
     
     return () => {
+      if (optimisticUpdateTimeout.current) {
+        clearTimeout(optimisticUpdateTimeout.current);
+      }
       channel.unsubscribe();
       console.log(`🔌 [useUserPoints] Unsubscribed from realtime updates`);
     };
@@ -168,6 +225,7 @@ export function useUserPoints() {
     refetch, 
     getLastRealtimeUpdateTime,
     lastRealtimeUpdateTime: lastRealTimeUpdateTime.current,
-    subscribeToPointsUpdates
+    subscribeToPointsUpdates,
+    updatePointsOptimistically
   };
 }
