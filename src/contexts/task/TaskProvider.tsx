@@ -24,7 +24,20 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   
   console.log(`🔄 [TaskProvider] Initializing/updating provider. isPaired: ${isPaired}, hasUser: ${!!user}`);
   
-  const taskService = useTaskService(pairData?.pair_id, refetchPoints);
+  // Create a performance-optimized version of the refetchPoints callback
+  const optimizedRefetchPoints = useCallback(async () => {
+    console.log('🚀 [TaskProvider] Optimized refetchPoints called - direct update');
+    const startTime = performance.now();
+    try {
+      await refetchPoints();
+      const duration = (performance.now() - startTime).toFixed(2);
+      console.log(`✅ [TaskProvider] Optimized refetchPoints completed in ${duration}ms`);
+    } catch (error) {
+      console.error('❌ [TaskProvider] Error in optimized refetchPoints:', error);
+    }
+  }, [refetchPoints]);
+  
+  const taskService = useTaskService(pairData?.pair_id, optimizedRefetchPoints);
 
   // Sync tasks from DB to state
   useEffect(() => {
@@ -106,6 +119,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
   // Function to complete a task
   const completeTask = async (id: string) => {
     console.log('✅ [TaskProvider] Completing task:', id);
+    const startTime = performance.now();
     
     if (!isAuthenticated) {
       showAuthRequiredToast();
@@ -132,11 +146,15 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         await taskService.completeTask(id, user.id);
         console.log('✅ [TaskProvider] Task marked as completed in database');
         
-        // Points will be updated via the real-time subscription in useUserPoints
-        // So we don't need an explicit refetch here, but we'll keep it as a backup
-        console.log('🔄 [TaskProvider] Explicitly refetching points after task completion');
-        await refetchPoints();
-        console.log('✅ [TaskProvider] Points refetched after task completion');
+        // Points will be updated via the real-time subscription
+        // We'll trigger refetch as a backup but with lower priority
+        setTimeout(() => {
+          console.log('🔄 [TaskProvider] Backup refetch after task completion');
+          refetchPoints();
+        }, 500);
+        
+        const taskCompletionDuration = (performance.now() - startTime).toFixed(2);
+        console.log(`⏱️ [TaskProvider] Task completion flow took ${taskCompletionDuration}ms`);
         
         sonnerToast.success("Task completed!", {
           description: `You earned ${task.points} points`,
@@ -214,17 +232,6 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   
-  // Create a wrapped version of refetchPoints with logging
-  const enhancedRefetchPoints = useCallback(async () => {
-    console.log('🔄 [TaskProvider] refetchPoints called');
-    try {
-      await refetchPoints();
-      console.log('✅ [TaskProvider] refetchPoints completed successfully');
-    } catch (error) {
-      console.error('❌ [TaskProvider] Error in refetchPoints:', error);
-    }
-  }, [refetchPoints]);
-  
   // Get a color for a task tag (moved from getTagColor function to use the utility)
   const getTagColor = useCallback((tag: TaskTag): string => {
     return state.tagColors[tag] || "bg-gray-100 text-gray-800";
@@ -241,7 +248,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
     loadingTasks,
     error,
     refetchTasks,
-    refetchPoints: enhancedRefetchPoints
+    refetchPoints: optimizedRefetchPoints
   };
   
   console.log('🔄 [TaskProvider] Refreshing context value with tasks:', state.tasks.length);

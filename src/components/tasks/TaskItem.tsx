@@ -22,6 +22,7 @@ export function TaskItem({ task }: TaskItemProps) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const { toast } = useToast();
   const componentRef = useRef<HTMLDivElement>(null);
+  const taskCompletionTimeRef = useRef<number>(0);
   
   const handleComplete = async () => {
     if (!isAuthenticated) {
@@ -30,17 +31,17 @@ export function TaskItem({ task }: TaskItemProps) {
     }
     
     if (!task.completed) {
+      taskCompletionTimeRef.current = performance.now();
       console.log(`🎯 [TaskItem] Starting task completion for task: ${task.id}`);
       setIsCompleting(true);
       
       try {
         await completeTask(task.id);
-        console.log(`✅ [TaskItem] Task completed: ${task.id}`);
+        const completionDuration = (performance.now() - taskCompletionTimeRef.current).toFixed(2);
+        console.log(`✅ [TaskItem] Task completed: ${task.id} in ${completionDuration}ms`);
         
-        // Make sure we refetch the points after a task is completed
-        console.log(`🔄 [TaskItem] Calling refetchPoints after task completion`);
-        await refetchPoints();
-        console.log(`✅ [TaskItem] Points refetched after task completion`);
+        // No need to manually refetch points as we're now using the realtime updates
+        // That should make the points update immediately
       } catch (error) {
         console.error(`❌ [TaskItem] Error completing task:`, error);
       } finally {

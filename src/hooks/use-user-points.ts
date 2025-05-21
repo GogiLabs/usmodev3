@@ -17,6 +17,7 @@ export function useUserPoints() {
   const initialized = useRef(false);
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   const fetchCounter = useRef(0);
+  const lastRealTimeUpdateTime = useRef<number>(0);
   
   const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
@@ -24,6 +25,7 @@ export function useUserPoints() {
     // Increment counter each time fetch is called
     fetchCounter.current += 1;
     const fetchId = fetchCounter.current;
+    const startTime = performance.now();
     console.log(`🔄 [useUserPoints] Fetching points (#${fetchId}) for user: ${user.id}`);
     
     try {
@@ -41,7 +43,8 @@ export function useUserPoints() {
         available_points: 0
       };
       
-      console.log(`✅ [useUserPoints] Points fetched (#${fetchId}):`, newPoints);
+      const fetchDuration = (performance.now() - startTime).toFixed(2);
+      console.log(`✅ [useUserPoints] Points fetched (#${fetchId}) in ${fetchDuration}ms:`, newPoints);
       
       // Store the fetched points for comparison
       const previousPoints = lastFetchedPoints.current;
@@ -49,7 +52,7 @@ export function useUserPoints() {
   
       // Always update points on force update to trigger animations
       if (forceUpdate) {
-        console.log(`🔄 [useUserPoints] Force updating points from ${previousPoints?.available_points} to ${newPoints.available_points}`);
+        console.log(`⚡ [useUserPoints] Force updating points from ${previousPoints?.available_points} to ${newPoints.available_points}`);
         setPoints({...newPoints}); // Create new object to ensure React detects the change
         initialized.current = true;
         return;
@@ -83,6 +86,15 @@ export function useUserPoints() {
     }
   }, [user]);
 
+  const handleRealtimeUpdate = useCallback((payload: any) => {
+    console.log('📣 [useUserPoints] Realtime update received:', payload);
+    lastRealTimeUpdateTime.current = Date.now();
+    console.log(`⏱️ [useUserPoints] Setting lastRealtimeUpdateTime to ${lastRealTimeUpdateTime.current}`);
+    
+    // Force immediate update for realtime events with highest priority
+    return fetchUserPoints(true);
+  }, [fetchUserPoints]);
+
   useEffect(() => {
     console.log(`🔍 [useUserPoints] Hook initialized/updated with user:`, user?.id);
     if (!user) {
@@ -102,10 +114,7 @@ export function useUserPoints() {
         schema: 'public', 
         table: 'user_points',
         filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        console.log('📣 [useUserPoints] Realtime update received:', payload);
-        fetchUserPoints(true); // Force update for realtime events to trigger animations
-      })
+      }, handleRealtimeUpdate)
       .subscribe();
     
     console.log(`🎧 [useUserPoints] Subscribed to realtime updates for user ${user.id}`);
@@ -114,7 +123,7 @@ export function useUserPoints() {
       channel.unsubscribe();
       console.log(`🔌 [useUserPoints] Unsubscribed from realtime updates`);
     };
-  }, [user, fetchUserPoints]);
+  }, [user, fetchUserPoints, handleRealtimeUpdate]);
   
   // Create a wrapped refetch function with logging
   const refetch = useCallback(() => {
@@ -122,5 +131,17 @@ export function useUserPoints() {
     return fetchUserPoints(true); // Force update on manual refetch
   }, [fetchUserPoints]);
   
-  return { points, loading, error, refetch };
+  // Track when the last realtime update happened
+  const getLastRealtimeUpdateTime = useCallback(() => {
+    return lastRealTimeUpdateTime.current;
+  }, []);
+  
+  return { 
+    points, 
+    loading, 
+    error, 
+    refetch, 
+    getLastRealtimeUpdateTime,
+    lastRealtimeUpdateTime: lastRealTimeUpdateTime.current
+  };
 }
