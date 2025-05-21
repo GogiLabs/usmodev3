@@ -47,6 +47,14 @@ export function useUserPoints() {
       const previousPoints = lastFetchedPoints.current;
       lastFetchedPoints.current = newPoints;
   
+      // Always update points on force update to trigger animations
+      if (forceUpdate) {
+        console.log(`🔄 [useUserPoints] Force updating points from ${previousPoints?.available_points} to ${newPoints.available_points}`);
+        setPoints({...newPoints}); // Create new object to ensure React detects the change
+        initialized.current = true;
+        return;
+      }
+      
       // Update points state, with special handling for different scenarios
       setPoints(prev => {
         // On first load, just set the points without triggering animations
@@ -56,9 +64,8 @@ export function useUserPoints() {
           return newPoints;
         }
         
-        // If points changed or force update is requested, return new points to trigger re-render
-        if (forceUpdate || 
-            previousPoints === null || 
+        // If points changed, return new points to trigger re-render
+        if (previousPoints === null || 
             previousPoints.available_points !== newPoints.available_points) {
           console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
           return { ...newPoints };
@@ -97,7 +104,7 @@ export function useUserPoints() {
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
         console.log('📣 [useUserPoints] Realtime update received:', payload);
-        fetchUserPoints(true); // Force update for realtime events
+        fetchUserPoints(true); // Force update for realtime events to trigger animations
       })
       .subscribe();
     

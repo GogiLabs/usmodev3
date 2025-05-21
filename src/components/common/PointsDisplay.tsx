@@ -25,9 +25,63 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pointsRef = useRef<number | null>(null);
+  const lastUpdateTimeRef = useRef<number>(0);
   
   const { isAuthenticated } = useAuth();
 
+  // Calculate available points (safely handle case where points might be null)
+  const earnedPoints = points?.earned_points || 0;
+  const spentPoints = points?.spent_points || 0;
+  const availablePoints = points?.available_points || 0;
+  
+  // Immediately trigger animation when points change
+  useEffect(() => {
+    if (!loading && points) {
+      const currentPoints = points.available_points;
+      
+      // Skip initial load animation
+      if (pointsRef.current === null) {
+        pointsRef.current = currentPoints;
+        setLastPoints(currentPoints);
+        return;
+      }
+      
+      // Check if points changed and if enough time has passed since last animation
+      if (currentPoints !== pointsRef.current) {
+        const now = Date.now();
+        
+        // Only animate if it's been at least 300ms since last animation
+        // This prevents multiple animations firing too close together
+        if (now - lastUpdateTimeRef.current > 300) {
+          const delta = currentPoints - pointsRef.current;
+          
+          console.log(`📊 [PointsDisplay] Points changed from ${pointsRef.current} to ${currentPoints} (delta: ${delta})`);
+          
+          // Update state to trigger animations
+          setPointDelta(delta);
+          setIsAnimating(true);
+          setShowDelta(true);
+          lastUpdateTimeRef.current = now;
+          
+          // Clear animations after delay
+          if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
+          deltaTimeoutRef.current = setTimeout(() => {
+            setShowDelta(false);
+          }, 1500);
+          
+          if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+          animationTimeoutRef.current = setTimeout(() => {
+            setIsAnimating(false);
+          }, 1800);
+          
+          // Update references
+          setLastPoints(currentPoints);
+          pointsRef.current = currentPoints;
+        }
+      }
+    }
+  }, [points, loading]);
+  
   // Periodically refresh points if authenticated to ensure we have latest data
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -40,65 +94,14 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
     
     return () => clearInterval(intervalId);
   }, [isAuthenticated, refetch]);
-
-  // Calculate available points (safely handle case where points might be null)
-  const earnedPoints = points?.earned_points || 0;
-  const spentPoints = points?.spent_points || 0;
-  const availablePoints = points?.available_points || 0;
   
-  // Compare current points with previous points whenever points update
-  const compareAndAnimatePoints = useCallback(() => {
-    if (loading || !points) return;
-    
-    console.log(`🔍 [PointsDisplay] Checking for points changes. Current: ${availablePoints}, Previous ref: ${pointsRef.current}`);
-    
-    // Skip initial load animation
-    if (pointsRef.current === null) {
-      pointsRef.current = availablePoints;
-      setLastPoints(availablePoints);
-      console.log(`🏁 [PointsDisplay] Initial points set: ${availablePoints}`);
-      return;
-    }
-    
-    // Only trigger animation if points actually changed
-    if (availablePoints !== pointsRef.current) {
-      // Calculate the delta
-      const delta = availablePoints - pointsRef.current;
-      
-      // Update state to trigger animations
-      setPointDelta(delta);
-      setIsAnimating(true);
-      setShowDelta(true);
-      
-      console.log(`📊 [PointsDisplay] Points changed from ${pointsRef.current} to ${availablePoints} (delta: ${delta})`);
-      
-      // Clear animations after delay
-      if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
-      deltaTimeoutRef.current = setTimeout(() => {
-        setShowDelta(false);
-      }, 1500);
-      
-      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-      animationTimeoutRef.current = setTimeout(() => {
-        setIsAnimating(false);
-      }, 1800);
-      
-      // Update references
-      setLastPoints(availablePoints);
-      pointsRef.current = availablePoints;
-    }
-  }, [availablePoints, loading, points]);
-  
-  // Detect changes in points to trigger animation
+  // Cleanup function
   useEffect(() => {
-    compareAndAnimatePoints();
-    
-    // Cleanup function
     return () => {
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
       if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
     };
-  }, [points, compareAndAnimatePoints]);
+  }, []);
 
   if (loading && !points) {
     return (

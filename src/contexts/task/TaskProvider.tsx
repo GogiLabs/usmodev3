@@ -1,4 +1,3 @@
-
 import React, { useReducer, useEffect, useState, useCallback } from 'react';
 import { TaskContext } from './TaskContext';
 import { taskReducer, initialTaskState } from './taskReducer';
@@ -133,7 +132,8 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         await taskService.completeTask(id, user.id);
         console.log('✅ [TaskProvider] Task marked as completed in database');
         
-        // Make sure we refetch the points after completion
+        // Points will be updated via the real-time subscription in useUserPoints
+        // So we don't need an explicit refetch here, but we'll keep it as a backup
         console.log('🔄 [TaskProvider] Explicitly refetching points after task completion');
         await refetchPoints();
         console.log('✅ [TaskProvider] Points refetched after task completion');
@@ -183,6 +183,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (taskToDelete && taskToDelete.completed) {
           console.log('🔄 [TaskProvider] Refetching points after deleting completed task');
+          // Points will be updated via real-time; this is just a backup
           await refetchPoints();
           console.log('✅ [TaskProvider] Points refetched after task deletion');
         }
