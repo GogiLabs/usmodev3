@@ -1,3 +1,4 @@
+
 import { useUserPoints } from "@/hooks/use-user-points";
 import { Heart, Loader2, Sparkles, Star, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     const animatePointsChange = useCallback((newPoints: number, previousPoints: number) => {
       // Skip if no change or if we don't know the previous points
       if (previousPoints === null || newPoints === previousPoints) {
+        console.log(`🚫 [PointsDisplay] No points change to animate: ${previousPoints} -> ${newPoints}`);
         return;
       }
       

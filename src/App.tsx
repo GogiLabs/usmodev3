@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -73,8 +72,8 @@ const App = () => {
                   <AppRoutes />
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
-                  {/* Hidden PointsDisplay just to set up the ref */}
-                  <div className="hidden">
+                  {/* Create a visible PointsDisplay that's accessible via ref */}
+                  <div className="fixed top-4 right-4 z-50">
                     <PointsDisplay ref={pointsDisplayRef} />
                   </div>
                 </RewardProvider>
