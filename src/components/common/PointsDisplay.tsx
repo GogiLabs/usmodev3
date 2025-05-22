@@ -31,6 +31,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const animationPendingRef = useRef<boolean>(false);
     const updateIdRef = useRef<number>(0);
+    const listenerRegisteredRef = useRef<boolean>(false);
     
     const { isAuthenticated } = useAuth();
 
@@ -66,12 +67,12 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       // Clear animations after delay
       deltaTimeoutRef.current = setTimeout(() => {
         setShowDelta(false);
-      }, 2000); // Increased from 1500ms to 2000ms
+      }, 2000); // 2000ms visibility for delta
       
       animationTimeoutRef.current = setTimeout(() => {
         setIsAnimating(false);
         animationPendingRef.current = false;
-      }, 2300); // Increased from 1800ms to 2300ms
+      }, 2300); // 2300ms for animation
     }, []);
 
     // Expose the animatePointsChange method via ref
@@ -79,11 +80,18 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       animatePoints: animatePointsChange
     }), [animatePointsChange]);
     
-    // Subscribe to points updates
+    // Set up points update subscription - CRITICAL FIX: This must be stable across re-renders
     useEffect(() => {
       if (!isAuthenticated) return;
       
+      // Don't register duplicated listeners
+      if (listenerRegisteredRef.current) {
+        console.log('🛑 [PointsDisplay] Listener already registered, skipping');
+        return;
+      }
+      
       console.log(`🔌 [PointsDisplay] Setting up points update subscription`);
+      listenerRegisteredRef.current = true;
       
       const unsubscribe = subscribeToPointsUpdates((newPointsData) => {
         const newPointsValue = newPointsData.available_points;
@@ -102,23 +110,35 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
         }
       });
       
-      return unsubscribe;
+      return () => {
+        console.log('🔌 [PointsDisplay] Cleaning up points subscription');
+        unsubscribe();
+        listenerRegisteredRef.current = false;
+      };
     }, [isAuthenticated, subscribeToPointsUpdates, lastPoints, animatePointsChange]);
     
-    // Initialize lastPoints when points first load
+    // Initialize lastPoints when points first load - separate from the listener setup
     useEffect(() => {
       if (points && lastPoints === null) {
         setLastPoints(points.available_points);
       }
     }, [points, lastPoints]);
     
-    // Cleanup function
+    // Cleanup function - separate from subscription management
     useEffect(() => {
       return () => {
         if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
         if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
       };
     }, []);
+    
+    // Force a listener check on mount and re-register if needed
+    useEffect(() => {
+      if (isAuthenticated && !listenerRegisteredRef.current && points) {
+        console.log('🔄 [PointsDisplay] Component mounted, ensuring listener is registered');
+        setLastPoints(points.available_points);
+      }
+    }, [isAuthenticated, points]);
 
     const handleManualRefresh = useCallback(() => {
       console.log(`🖱️ [PointsDisplay] Points display clicked, triggering refetch`);
@@ -147,8 +167,8 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
               className
             )}
             initial={{ scale: 1 }}
-            animate={isAnimating ? { scale: [1, 1.15, 1] } : { scale: 1 }} // Increased scale effect
-            transition={{ duration: 0.7 }} // Extended animation duration
+            animate={isAnimating ? { scale: [1, 1.2, 1] } : { scale: 1 }} // Enhanced scale effect
+            transition={{ duration: 1.0 }} // Extended animation duration
             onClick={handleManualRefresh}
             data-testid="points-display"
           >
@@ -157,22 +177,22 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                 {isAnimating && (
                   <motion.div
                     initial={{ scale: 0, rotate: 0 }}
-                    animate={{ scale: 1.5, rotate: 360 }} // Added rotation and increased scale
+                    animate={{ scale: 1.8, rotate: 720 }} // More rotation and increased scale
                     exit={{ scale: 0, opacity: 0 }}
-                    transition={{ duration: 0.8 }} // Extended duration
+                    transition={{ duration: 1.2 }} // Extended duration
                     className="absolute -top-1 -right-1"
                   >
-                    <Sparkles className="h-4 w-4 text-yellow-400" /> {/* Changed color to be more visible */}
+                    <Sparkles className="h-4 w-4 text-yellow-400" />
                   </motion.div>
                 )}
               </AnimatePresence>
               
               <motion.div
                 animate={isAnimating ? { 
-                  scale: [1, 1.5, 1],
-                  rotate: [0, 15, -15, 0] // Added wiggle effect
+                  scale: [1, 1.8, 1],
+                  rotate: [0, 25, -25, 0] // Enhanced wiggle effect
                 } : {}}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 1.0 }}
               >
                 <Heart className={cn(
                   "h-5 w-5 text-primary transition-all", 
@@ -186,13 +206,13 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                 {showDelta && pointDelta !== 0 && (
                   <motion.span 
                     className={cn(
-                      "absolute -top-6 right-0 text-lg font-bold", // Increased size and position
+                      "absolute -top-7 right-0 text-xl font-bold", // Increased size and position
                       pointDelta > 0 ? "text-green-600" : "text-red-600"
                     )}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.5 }} // Extended duration
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.7 }} // Extended duration
                     key={`delta-${Date.now()}`}
                   >
                     {pointDelta > 0 ? `+${pointDelta}` : pointDelta}
@@ -206,10 +226,10 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                   isAnimating && "text-rose-500"
                 )}
                 animate={isAnimating ? { 
-                  scale: [1, 1.3, 1],
+                  scale: [1, 1.5, 1],
                   color: ['#9b87f5', '#ec4899', '#9b87f5']
                 } : {}}
-                transition={{ duration: 1.0 }} // Extended duration
+                transition={{ duration: 1.2 }} // Extended duration
                 key={availablePoints} // Force re-render when points change
               >
                 {availablePoints}
@@ -217,10 +237,10 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
               
               <motion.div
                 animate={isAnimating ? { 
-                  rotate: [0, 360],
-                  scale: [1, 1.5, 1] // Added scale effect
+                  rotate: [0, 720],
+                  scale: [1, 1.8, 1] // Enhanced scale effect
                 } : {}}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 1.0 }}
               >
                 <Star className={cn(
                   "h-3 w-3 text-primary",

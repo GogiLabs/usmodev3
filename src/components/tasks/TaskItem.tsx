@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
@@ -76,10 +75,12 @@ export function TaskItem({ task }: TaskItemProps) {
       console.log(`🎮 [TaskItem] Current points: ${currentPoints}, Task will add: ${earnedPoints} points`);
       
       try {
-        // Pre-emptively trigger animation for instant feedback
+        // CRITICAL FIX: Pre-emptively trigger animation IMMEDIATELY before any async ops
         if (pointsDisplayRef.current) {
           console.log(`⚡ [TaskItem] Pre-emptively triggering points animation: ${currentPoints} -> ${currentPoints + earnedPoints}`);
           pointsDisplayRef.current.animatePoints(currentPoints + earnedPoints, currentPoints);
+        } else {
+          console.warn("⚠️ [TaskItem] Cannot animate points - ref not available!");
         }
         
         // Apply optimistic updates IMMEDIATELY for instant feedback

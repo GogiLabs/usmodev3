@@ -61,7 +61,7 @@ export function useUserPoints() {
         setPoints({...newPoints}); // Create new object to ensure React detects the change
         initialized.current = true;
         
-        // Notify listeners about the points update
+        // Notify listeners about the points update - CRITICAL FIX: show listener count
         const listenerCount = pointsUpdateListeners.current.length;
         console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of points update`);
         
@@ -69,7 +69,10 @@ export function useUserPoints() {
         globalUpdateId.current += 1;
         const updateId = globalUpdateId.current;
         
-        pointsUpdateListeners.current.forEach(listener => {
+        // Make a copy to avoid modification issues during iteration
+        const currentListeners = [...pointsUpdateListeners.current];
+        
+        currentListeners.forEach(listener => {
           try {
             console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
             listener(newPoints);
@@ -94,7 +97,7 @@ export function useUserPoints() {
             previousPoints.available_points !== newPoints.available_points) {
           console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
           
-          // Notify listeners about the points update
+          // Notify listeners about the points update - CRITICAL FIX: show listener count
           const listenerCount = pointsUpdateListeners.current.length;
           console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of points update`);
           
@@ -102,7 +105,10 @@ export function useUserPoints() {
           globalUpdateId.current += 1;
           const updateId = globalUpdateId.current;
           
-          pointsUpdateListeners.current.forEach(listener => {
+          // Make a copy to avoid modification issues during iteration
+          const currentListeners = [...pointsUpdateListeners.current];
+          
+          currentListeners.forEach(listener => {
             try {
               console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
               listener(newPoints);
@@ -151,11 +157,12 @@ export function useUserPoints() {
     globalUpdateId.current += 1;
     const updateId = globalUpdateId.current;
     
-    // Notify listeners about the optimistic update
+    // CRITICAL FIX: Make a copy of listeners array before iterating
     const listenerCount = pointsUpdateListeners.current.length;
     console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of optimistic points update (ID: ${updateId})`);
     
-    pointsUpdateListeners.current.forEach(listener => {
+    const currentListeners = [...pointsUpdateListeners.current];
+    currentListeners.forEach(listener => {
       try {
         console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
         listener(newPoints);
@@ -184,8 +191,14 @@ export function useUserPoints() {
   const subscribeToPointsUpdates = useCallback((callback: (points: UserPoints) => void) => {
     console.log(`➕ [useUserPoints] Adding points update listener`);
     
-    // Add the listener to our array
-    pointsUpdateListeners.current = [...pointsUpdateListeners.current, callback];
+    // CRITICAL FIX: Check if listener already exists to prevent duplicates
+    const existingIndex = pointsUpdateListeners.current.findIndex(cb => cb === callback);
+    if (existingIndex >= 0) {
+      console.log(`⚠️ [useUserPoints] Listener already exists, not adding duplicate`);
+    } else {
+      // Add the listener to our array
+      pointsUpdateListeners.current = [...pointsUpdateListeners.current, callback];
+    }
     
     // If we already have points, call the callback immediately
     if (points) {
@@ -200,6 +213,7 @@ export function useUserPoints() {
     };
   }, [points]);
 
+  // Set up Supabase subscription for realtime updates
   useEffect(() => {
     console.log(`🔍 [useUserPoints] Hook initialized/updated with user:`, user?.id);
     if (!user) {

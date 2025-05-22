@@ -13,7 +13,7 @@ import { TaskProvider } from "./contexts/task";
 import { RewardProvider } from "./contexts/reward/RewardContext";
 import { NetworkStatusIndicator } from "./components/common/NetworkStatusIndicator";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useRef } from "react";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import { GuestToAuthModal } from "./components/common/GuestToAuthModal";
 import { PointsDisplay } from "./components/common/PointsDisplay";
@@ -62,6 +62,9 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  // Create persistent pointsDisplayRef to avoid recreation on renders
+  const isPointsDisplayMounted = useRef(false);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -73,10 +76,19 @@ const App = () => {
                   <AppRoutes />
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
+                  
                   {/* Create a visible PointsDisplay that's accessible via ref with enhanced styling */}
                   <div className="fixed top-4 right-4 z-50 animate-fade-in">
-                    <div className="p-1 rounded-full bg-gradient-to-r from-purple-500/10 to-pink-500/10">
-                      <PointsDisplay ref={pointsDisplayRef} />
+                    <div className="p-1.5 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/15 backdrop-blur-sm shadow-lg">
+                      <PointsDisplay ref={(ref) => {
+                        // Store the ref, but only do it once to avoid re-registering listeners
+                        if (ref && !isPointsDisplayMounted.current) {
+                          // @ts-ignore - We know this is the right type
+                          pointsDisplayRef.current = ref;
+                          isPointsDisplayMounted.current = true;
+                          console.log('📌 [App] PointsDisplay ref registered successfully');
+                        }
+                      }} />
                     </div>
                   </div>
                 </RewardProvider>
