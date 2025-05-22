@@ -24,7 +24,22 @@ export function TaskItem({ task }: TaskItemProps) {
   const { toast } = useToast();
   const componentRef = useRef<HTMLDivElement>(null);
   const taskCompletionTimeRef = useRef<number>(0);
-  const { points, refetch: refetchPoints } = useUserPoints();
+  const { points, updatePointsOptimistically, subscribeToPointsUpdates } = useUserPoints();
+  
+  // Subscribe to point updates when component mounts
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log(`🔌 [TaskItem] Setting up points listener`);
+      const unsubscribe = subscribeToPointsUpdates((updatedPoints) => {
+        console.log(`👂 [TaskItem] Received points update in listener:`, updatedPoints);
+      });
+      
+      return () => {
+        console.log(`🔌 [TaskItem] Cleaning up points listener`);
+        unsubscribe();
+      };
+    }
+  }, [isAuthenticated, subscribeToPointsUpdates]);
   
   const handleComplete = async () => {
     if (!isAuthenticated) {
@@ -43,14 +58,10 @@ export function TaskItem({ task }: TaskItemProps) {
       console.log(`🎮 [TaskItem] Current points: ${currentPoints}, Task will add: ${earnedPoints} points`);
       
       try {
-        // Optimistically update UI by immediately triggering points animation
-        // This happens BEFORE the actual database operation completes
-        setTimeout(() => {
-          console.log(`⚡ [TaskItem] Pre-emptively triggering points animation: ${currentPoints} -> ${currentPoints + earnedPoints}`);
-          // Force a points refetch to show animation immediately
-          refetchPoints();
-        }, 50);
+        // Apply optimistic updates IMMEDIATELY for instant feedback
+        updatePointsOptimistically(earnedPoints);
         
+        // This is now just for server-side persistence
         await completeTask(task.id);
         const completionDuration = (performance.now() - taskCompletionTimeRef.current).toFixed(2);
         console.log(`✅ [TaskItem] Task completed: ${task.id} in ${completionDuration}ms`);

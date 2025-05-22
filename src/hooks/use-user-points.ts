@@ -21,6 +21,9 @@ export function useUserPoints() {
   const pointsUpdateListeners = useRef<Array<(points: UserPoints) => void>>([]);
   const optimisticUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
   
+  // Ensure state sync across hook instances
+  const globalUpdateId = useRef<number>(0);
+  
   const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
     
@@ -59,9 +62,16 @@ export function useUserPoints() {
         initialized.current = true;
         
         // Notify listeners about the points update
-        console.log(`🔔 [useUserPoints] Notifying ${pointsUpdateListeners.current.length} listeners of points update`);
+        const listenerCount = pointsUpdateListeners.current.length;
+        console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of points update`);
+        
+        // Generate a unique update ID for this update
+        globalUpdateId.current += 1;
+        const updateId = globalUpdateId.current;
+        
         pointsUpdateListeners.current.forEach(listener => {
           try {
+            console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
             listener(newPoints);
           } catch (err) {
             console.error('[useUserPoints] Error in listener:', err);
@@ -85,9 +95,16 @@ export function useUserPoints() {
           console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
           
           // Notify listeners about the points update
-          console.log(`🔔 [useUserPoints] Notifying ${pointsUpdateListeners.current.length} listeners of points update`);
+          const listenerCount = pointsUpdateListeners.current.length;
+          console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of points update`);
+          
+          // Generate a unique update ID for this update
+          globalUpdateId.current += 1;
+          const updateId = globalUpdateId.current;
+          
           pointsUpdateListeners.current.forEach(listener => {
             try {
+              console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
               listener(newPoints);
             } catch (err) {
               console.error('[useUserPoints] Error in listener:', err);
@@ -130,10 +147,17 @@ export function useUserPoints() {
     // Update state immediately for responsive UI
     setPoints(newPoints);
     
+    // Generate a unique update ID for this update
+    globalUpdateId.current += 1;
+    const updateId = globalUpdateId.current;
+    
     // Notify listeners about the optimistic update
-    console.log(`🔔 [useUserPoints] Notifying listeners of optimistic points update`);
+    const listenerCount = pointsUpdateListeners.current.length;
+    console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of optimistic points update (ID: ${updateId})`);
+    
     pointsUpdateListeners.current.forEach(listener => {
       try {
+        console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
         listener(newPoints);
       } catch (err) {
         console.error('[useUserPoints] Error in listener during optimistic update:', err);
@@ -159,7 +183,9 @@ export function useUserPoints() {
   // Add a new subscribe method to listen for points updates
   const subscribeToPointsUpdates = useCallback((callback: (points: UserPoints) => void) => {
     console.log(`➕ [useUserPoints] Adding points update listener`);
-    pointsUpdateListeners.current.push(callback);
+    
+    // Add the listener to our array
+    pointsUpdateListeners.current = [...pointsUpdateListeners.current, callback];
     
     // If we already have points, call the callback immediately
     if (points) {

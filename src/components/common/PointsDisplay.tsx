@@ -17,15 +17,15 @@ interface PointsDisplayProps {
 }
 
 export function PointsDisplay({ className }: PointsDisplayProps) {
-  const { points, loading, refetch, lastRealtimeUpdateTime, subscribeToPointsUpdates } = useUserPoints();
+  const { points, loading, refetch, subscribeToPointsUpdates } = useUserPoints();
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastPoints, setLastPoints] = useState<number | null>(null);
   const [pointDelta, setPointDelta] = useState<number>(0);
   const [showDelta, setShowDelta] = useState(false);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pointsRef = useRef<number | null>(null);
   const animationPendingRef = useRef<boolean>(false);
+  const updateIdRef = useRef<number>(0);
   
   const { isAuthenticated } = useAuth();
 
@@ -33,39 +33,29 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
   const earnedPoints = points?.earned_points || 0;
   const spentPoints = points?.spent_points || 0;
   const availablePoints = points?.available_points || 0;
-  
-  useEffect(() => {
-    // Initialize pointsRef on first render
-    if (pointsRef.current === null && points) {
-      console.log(`🏁 [PointsDisplay] Initial points set to ${points.available_points}`);
-      pointsRef.current = points.available_points;
-      setLastPoints(points.available_points);
-    }
-  }, [points]);
 
   // Function to trigger animation
   const animatePointsChange = useCallback((newPoints: number, previousPoints: number) => {
-    const delta = newPoints - previousPoints;
-    
-    // Don't animate if there's no change
-    if (delta === 0) {
-      console.log(`🔍 [PointsDisplay] No points change detected, skipping animation`);
+    // Skip if no change or if we don't know the previous points
+    if (previousPoints === null || newPoints === previousPoints) {
       return;
     }
     
-    console.log(`✨ [PointsDisplay] Triggering animation: points ${previousPoints} -> ${newPoints}, delta ${delta}`);
+    const delta = newPoints - previousPoints;
+    updateIdRef.current += 1;
+    const currentUpdateId = updateIdRef.current;
+    
+    console.log(`✨ [PointsDisplay] Triggering animation: points ${previousPoints} -> ${newPoints}, delta ${delta} (update ID: ${currentUpdateId})`);
     
     // Clear any pending animations
     if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
     if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
     
-    // Reset animation pending flag
-    animationPendingRef.current = false;
-    
     // Set animation states
     setPointDelta(delta);
     setIsAnimating(true);
     setShowDelta(true);
+    setLastPoints(newPoints);
     
     // Clear animations after delay
     deltaTimeoutRef.current = setTimeout(() => {
@@ -74,44 +64,42 @@ export function PointsDisplay({ className }: PointsDisplayProps) {
     
     animationTimeoutRef.current = setTimeout(() => {
       setIsAnimating(false);
+      animationPendingRef.current = false;
     }, 1800);
-    
-    // Update references
-    setLastPoints(newPoints);
-    pointsRef.current = newPoints;
   }, []);
   
-  // More responsive subscription to points updates
+  // Subscribe to points updates
   useEffect(() => {
     if (!isAuthenticated) return;
     
     console.log(`🔌 [PointsDisplay] Setting up points update subscription`);
     
-    const unsubscribe = subscribeToPointsUpdates((newPoints) => {
-      const currentPointsRef = pointsRef.current ?? 0;
-      const newPointsValue = newPoints.available_points;
+    const unsubscribe = subscribeToPointsUpdates((newPointsData) => {
+      const newPointsValue = newPointsData.available_points;
+      const previousPointsValue = lastPoints === null ? newPointsValue : lastPoints;
       
-      console.log(`📊 [PointsDisplay] Points update received: ${currentPointsRef} -> ${newPointsValue}`);
+      console.log(`📊 [PointsDisplay] Points update received: ${previousPointsValue} -> ${newPointsValue}`);
       
-      if (currentPointsRef !== newPointsValue) {
-        // Suppress multiple animations that happen too quickly
-        if (!animationPendingRef.current) {
-          animationPendingRef.current = true;
-          
-          // Use requestAnimationFrame for smoother animation timing
-          requestAnimationFrame(() => {
-            animatePointsChange(newPointsValue, currentPointsRef);
-          });
-        } else {
+      if (previousPointsValue !== newPointsValue) {
+        // Handle animation queuing
+        if (animationPendingRef.current) {
           console.log(`🔄 [PointsDisplay] Animation already pending, updating final target to: ${newPointsValue}`);
-          // Just update the reference for next animation
-          pointsRef.current = newPointsValue;
+        } else {
+          animationPendingRef.current = true;
+          animatePointsChange(newPointsValue, previousPointsValue);
         }
       }
     });
     
     return unsubscribe;
-  }, [isAuthenticated, subscribeToPointsUpdates, animatePointsChange]);
+  }, [isAuthenticated, subscribeToPointsUpdates, lastPoints, animatePointsChange]);
+  
+  // Initialize lastPoints when points first load
+  useEffect(() => {
+    if (points && lastPoints === null) {
+      setLastPoints(points.available_points);
+    }
+  }, [points, lastPoints]);
   
   // Cleanup function
   useEffect(() => {

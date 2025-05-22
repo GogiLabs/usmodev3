@@ -138,12 +138,8 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     
-    // Optimistically update UI
+    // Optimistically update UI first for immediate feedback
     dispatch({ type: 'COMPLETE_TASK', payload: { id, userId: user?.id } });
-    
-    // Optimistically update points display immediately
-    // This provides immediate visual feedback to user
-    updatePointsOptimistically(task.points);
     
     if (isAuthenticated && isPaired && user) {
       try {
@@ -151,7 +147,8 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         await taskService.completeTask(id, user.id);
         console.log('✅ [TaskProvider] Task marked as completed in database');
         
-        // Call refetchPoints immediately after task completion to ensure points update is triggered fast
+        // Call refetchPoints immediately after task completion
+        // Points animation is now handled via the subscription system
         console.log('🔄 [TaskProvider] Explicitly refetching points after task completion');
         await optimizedRefetchPoints();
         
