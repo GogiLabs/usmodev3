@@ -1,5 +1,4 @@
-
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
 import { useTask } from "@/contexts/task";
@@ -10,6 +9,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserPoints } from "@/hooks/use-user-points";
+import { PointsDisplayHandle } from "@/components/common/PointsDisplay";
+
+// Create a global ref to access the PointsDisplay from any TaskItem
+export const pointsDisplayRef = React.createRef<PointsDisplayHandle>();
 
 interface TaskItemProps {
   task: Task;

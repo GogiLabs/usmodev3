@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +16,8 @@ import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { lazy, Suspense } from "react";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import { GuestToAuthModal } from "./components/common/GuestToAuthModal";
+import { PointsDisplay } from "./components/common/PointsDisplay";
+import { pointsDisplayRef } from "./components/tasks/TaskItem";
 
 // Configure React Query with better error handling
 const queryClient = new QueryClient({
@@ -70,6 +73,10 @@ const App = () => {
                   <AppRoutes />
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
+                  {/* Hidden PointsDisplay just to set up the ref */}
+                  <div className="hidden">
+                    <PointsDisplay ref={pointsDisplayRef} />
+                  </div>
                 </RewardProvider>
               </TaskProvider>
             </AuthProvider>
