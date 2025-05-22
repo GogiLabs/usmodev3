@@ -66,12 +66,12 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       // Clear animations after delay
       deltaTimeoutRef.current = setTimeout(() => {
         setShowDelta(false);
-      }, 1500);
+      }, 2000); // Increased from 1500ms to 2000ms
       
       animationTimeoutRef.current = setTimeout(() => {
         setIsAnimating(false);
         animationPendingRef.current = false;
-      }, 1800);
+      }, 2300); // Increased from 1800ms to 2300ms
     }, []);
 
     // Expose the animatePointsChange method via ref
@@ -147,8 +147,8 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
               className
             )}
             initial={{ scale: 1 }}
-            animate={isAnimating ? { scale: [1, 1.08, 1] } : { scale: 1 }}
-            transition={{ duration: 0.5 }}
+            animate={isAnimating ? { scale: [1, 1.15, 1] } : { scale: 1 }} // Increased scale effect
+            transition={{ duration: 0.7 }} // Extended animation duration
             onClick={handleManualRefresh}
             data-testid="points-display"
           >
@@ -156,19 +156,23 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
               <AnimatePresence>
                 {isAnimating && (
                   <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1.2 }}
+                    initial={{ scale: 0, rotate: 0 }}
+                    animate={{ scale: 1.5, rotate: 360 }} // Added rotation and increased scale
                     exit={{ scale: 0, opacity: 0 }}
+                    transition={{ duration: 0.8 }} // Extended duration
                     className="absolute -top-1 -right-1"
                   >
-                    <Sparkles className="h-4 w-4 text-accent" />
+                    <Sparkles className="h-4 w-4 text-yellow-400" /> {/* Changed color to be more visible */}
                   </motion.div>
                 )}
               </AnimatePresence>
               
               <motion.div
-                animate={isAnimating ? { scale: [1, 1.3, 1] } : {}}
-                transition={{ duration: 0.5 }}
+                animate={isAnimating ? { 
+                  scale: [1, 1.5, 1],
+                  rotate: [0, 15, -15, 0] // Added wiggle effect
+                } : {}}
+                transition={{ duration: 0.8 }}
               >
                 <Heart className={cn(
                   "h-5 w-5 text-primary transition-all", 
@@ -182,13 +186,13 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                 {showDelta && pointDelta !== 0 && (
                   <motion.span 
                     className={cn(
-                      "absolute -top-5 right-0 text-sm font-bold",
+                      "absolute -top-6 right-0 text-lg font-bold", // Increased size and position
                       pointDelta > 0 ? "text-green-600" : "text-red-600"
                     )}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.5 }} // Extended duration
                     key={`delta-${Date.now()}`}
                   >
                     {pointDelta > 0 ? `+${pointDelta}` : pointDelta}
@@ -202,17 +206,20 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                   isAnimating && "text-rose-500"
                 )}
                 animate={isAnimating ? { 
-                  scale: [1, 1.2, 1],
+                  scale: [1, 1.3, 1],
                   color: ['#9b87f5', '#ec4899', '#9b87f5']
                 } : {}}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 1.0 }} // Extended duration
                 key={availablePoints} // Force re-render when points change
               >
                 {availablePoints}
               </motion.span>
               
               <motion.div
-                animate={isAnimating ? { rotate: [0, 360] } : {}}
+                animate={isAnimating ? { 
+                  rotate: [0, 360],
+                  scale: [1, 1.5, 1] // Added scale effect
+                } : {}}
                 transition={{ duration: 0.8 }}
               >
                 <Star className={cn(

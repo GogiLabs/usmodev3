@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -72,9 +73,11 @@ const App = () => {
                   <AppRoutes />
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
-                  {/* Create a visible PointsDisplay that's accessible via ref */}
-                  <div className="fixed top-4 right-4 z-50">
-                    <PointsDisplay ref={pointsDisplayRef} />
+                  {/* Create a visible PointsDisplay that's accessible via ref with enhanced styling */}
+                  <div className="fixed top-4 right-4 z-50 animate-fade-in">
+                    <div className="p-1 rounded-full bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+                      <PointsDisplay ref={pointsDisplayRef} />
+                    </div>
                   </div>
                 </RewardProvider>
               </TaskProvider>
