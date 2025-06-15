@@ -159,7 +159,7 @@ export function useUserPoints() {
     
     // CRITICAL FIX: Make a copy of listeners array before iterating
     const listenerCount = pointsUpdateListeners.current.length;
-    console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of optimistic points update (ID: ${updateId})`);
+    console.log(`🔔 Govind [useUserPoints] Notifying ${listenerCount} listeners of optimistic points update (ID: ${updateId})`);
     
     const currentListeners = [...pointsUpdateListeners.current];
     currentListeners.forEach(listener => {
