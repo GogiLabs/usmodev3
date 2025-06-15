@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -60,19 +61,22 @@ const AppRoutes = () => {
   );
 };
 
-// Simplified PointsDisplayManager without infinite loops
+// Enhanced PointsDisplayManager with better change detection
 const PointsDisplayManager = () => {
   const { points } = useUserPoints();
   const pointsDisplayRef = useRef<any>(null);
   const lastKnownPointsRef = useRef<number | null>(null);
+  const [triggerKey, setTriggerKey] = useState(0);
 
   console.log(`🎯 [PointsDisplayManager] RENDER - Points object:`, points);
   console.log(`🎯 [PointsDisplayManager] RENDER - LastKnown: ${lastKnownPointsRef.current}`);
   console.log(`🎯 [PointsDisplayManager] RENDER - Ref current:`, pointsDisplayRef.current);
 
-  // Direct effect that triggers immediately when points.available_points changes
+  // Watch for changes in available points and trigger animation
   useEffect(() => {
-    if (!points?.available_points) {
+    console.log(`🔄 [PointsDisplayManager] Effect running with points:`, points?.available_points);
+    
+    if (!points?.available_points && points?.available_points !== 0) {
       console.log(`⚠️ [PointsDisplayManager] No points data, skipping`);
       return;
     }
@@ -82,31 +86,37 @@ const PointsDisplayManager = () => {
     
     console.log(`🔍 [PointsDisplayManager] Effect triggered - Current: ${currentPoints}, Last: ${lastKnown}`);
     
-    // Only trigger animation if we have a previous value and it's different
+    // Trigger animation if we have a previous value and it's different
     if (lastKnown !== null && lastKnown !== currentPoints) {
       console.log(`✨ [PointsDisplayManager] ANIMATION TRIGGER! ${lastKnown} -> ${currentPoints}`);
       
-      if (pointsDisplayRef.current?.animatePoints) {
-        console.log(`🚀 [PointsDisplayManager] CALLING animatePoints via ref`);
-        pointsDisplayRef.current.animatePoints(currentPoints, lastKnown);
-      } else {
-        console.log(`❌ [PointsDisplayManager] Ref or animatePoints method not available!`);
-      }
+      // Use a small delay to ensure the ref is available
+      setTimeout(() => {
+        if (pointsDisplayRef.current?.animatePoints) {
+          console.log(`🚀 [PointsDisplayManager] CALLING animatePoints via ref`);
+          pointsDisplayRef.current.animatePoints(currentPoints, lastKnown);
+        } else {
+          console.log(`❌ [PointsDisplayManager] Ref or animatePoints method not available!`);
+        }
+      }, 10);
     } else if (lastKnown === null) {
       console.log(`🏁 [PointsDisplayManager] First time setting points to ${currentPoints}`);
     }
     
-    // Update the ref immediately
+    // Update the ref 
     lastKnownPointsRef.current = currentPoints;
     console.log(`📝 [PointsDisplayManager] Updated lastKnownPointsRef to ${currentPoints}`);
-  }, [points?.available_points]); // Only watch the specific value, not the entire object
+    
+    // Force a re-render to ensure the component updates
+    setTriggerKey(prev => prev + 1);
+  }, [points?.available_points]);
 
-  console.log(`🎯 [PointsDisplayManager] About to render PointsDisplay with ref`);
+  console.log(`🎯 [PointsDisplayManager] About to render PointsDisplay with ref (trigger: ${triggerKey})`);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in">
       <div className="p-1.5 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/15 backdrop-blur-sm shadow-lg">
-        <PointsDisplay ref={pointsDisplayRef} />
+        <PointsDisplay ref={pointsDisplayRef} key={triggerKey} />
       </div>
     </div>
   );
@@ -125,7 +135,7 @@ const App = () => {
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
                   
-                  {/* Fixed PointsDisplay management without infinite loops */}
+                  {/* Enhanced PointsDisplay management with better change detection */}
                   <PointsDisplayManager />
                 </RewardProvider>
               </TaskProvider>
