@@ -61,37 +61,43 @@ const AppRoutes = () => {
   );
 };
 
-// Direct PointsDisplay Manager with ref-based animation
+// Simplified PointsDisplay Manager with direct animation triggering
 const PointsDisplayManager = () => {
   const { points } = useUserPoints();
   const [lastKnownPoints, setLastKnownPoints] = useState<number | null>(null);
   const pointsDisplayRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!points) return;
+    console.log(`🔍 [PointsDisplayManager] Points effect triggered. Points:`, points);
+    
+    if (!points) {
+      console.log(`⚠️ [PointsDisplayManager] No points data, skipping`);
+      return;
+    }
 
     const currentPoints = points.available_points;
+    console.log(`🔍 [PointsDisplayManager] Current points: ${currentPoints}, Last known: ${lastKnownPoints}`);
     
-    console.log(`🔍 [PointsDisplayManager] Points check: current=${currentPoints}, last=${lastKnownPoints}`);
-    
-    // If we have a previous points value and it's different, trigger animation
+    // Only trigger animation if we have a previous value and it's different
     if (lastKnownPoints !== null && lastKnownPoints !== currentPoints) {
-      console.log(`✨ [PointsDisplayManager] Triggering animation: ${lastKnownPoints} -> ${currentPoints}`);
-      console.log(`🎯 [PointsDisplayManager] Ref exists: ${!!pointsDisplayRef.current}`);
-      console.log(`🎯 [PointsDisplayManager] Ref has animatePoints: ${!!pointsDisplayRef.current?.animatePoints}`);
+      console.log(`✨ [PointsDisplayManager] Points changed! ${lastKnownPoints} -> ${currentPoints}`);
       
-      // Directly call animation on the component
-      if (pointsDisplayRef.current && pointsDisplayRef.current.animatePoints) {
-        console.log(`🚀 [PointsDisplayManager] Calling animatePoints`);
+      if (pointsDisplayRef.current?.animatePoints) {
+        console.log(`🚀 [PointsDisplayManager] Triggering animation via ref`);
         pointsDisplayRef.current.animatePoints(currentPoints, lastKnownPoints);
       } else {
-        console.log(`❌ [PointsDisplayManager] Cannot call animation - ref not ready`);
+        console.log(`❌ [PointsDisplayManager] Ref or animatePoints method not available`);
       }
+    } else {
+      console.log(`🛑 [PointsDisplayManager] No animation needed (first load or same value)`);
     }
     
-    // Update last known points
+    // Always update the last known points
+    console.log(`📝 [PointsDisplayManager] Updating lastKnownPoints to ${currentPoints}`);
     setLastKnownPoints(currentPoints);
-  }, [points, lastKnownPoints]);
+  }, [points?.available_points, lastKnownPoints]); // Watch the specific value, not the whole object
+
+  console.log(`🎯 [PointsDisplayManager] Render - Points: ${points?.available_points}, LastKnown: ${lastKnownPoints}`);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in">

@@ -38,26 +38,33 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
 
     // Function to trigger animation
     const animatePointsChange = useCallback((newPoints: number, previousPoints: number) => {
-      console.log(`🎯 [PointsDisplay] Animation called: ${previousPoints} -> ${newPoints}`);
+      console.log(`🎯 [PointsDisplay] animatePoints called: ${previousPoints} -> ${newPoints}`);
       
       // Skip if no change
       if (previousPoints === newPoints) {
-        console.log(`🚫 [PointsDisplay] No change, skipping animation`);
+        console.log(`🚫 [PointsDisplay] No change detected, skipping animation`);
         return;
       }
       
       const delta = newPoints - previousPoints;
-      
       console.log(`✨ [PointsDisplay] Starting animation with delta: ${delta}`);
       
       // Clear any pending animations
-      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-      if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
+      if (animationTimeoutRef.current) {
+        console.log(`🧹 [PointsDisplay] Clearing existing animation timeout`);
+        clearTimeout(animationTimeoutRef.current);
+      }
+      if (deltaTimeoutRef.current) {
+        console.log(`🧹 [PointsDisplay] Clearing existing delta timeout`);
+        clearTimeout(deltaTimeoutRef.current);
+      }
       
       // Set animation states
       setPointDelta(delta);
       setIsAnimating(true);
       setShowDelta(true);
+      
+      console.log(`🎭 [PointsDisplay] Animation state set - delta: ${delta}, animating: true, showDelta: true`);
       
       // Clear animations after delay
       deltaTimeoutRef.current = setTimeout(() => {
@@ -72,22 +79,33 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     }, []);
 
     // Expose the animatePointsChange method via ref
-    useImperativeHandle(ref, () => ({
-      animatePoints: animatePointsChange
-    }), [animatePointsChange]);
+    useImperativeHandle(ref, () => {
+      console.log(`🔗 [PointsDisplay] Setting up ref with animatePoints method`);
+      return {
+        animatePoints: animatePointsChange
+      };
+    }, [animatePointsChange]);
     
     // Cleanup function
     useEffect(() => {
       return () => {
-        if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-        if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
+        if (animationTimeoutRef.current) {
+          console.log(`🧹 [PointsDisplay] Cleanup: clearing animation timeout`);
+          clearTimeout(animationTimeoutRef.current);
+        }
+        if (deltaTimeoutRef.current) {
+          console.log(`🧹 [PointsDisplay] Cleanup: clearing delta timeout`);
+          clearTimeout(deltaTimeoutRef.current);
+        }
       };
     }, []);
 
     const handleManualRefresh = useCallback(() => {
-      console.log(`🖱️ [PointsDisplay] Points display clicked, triggering refetch`);
+      console.log(`🖱️ [PointsDisplay] Manual refresh clicked`);
       refetch();
     }, [refetch]);
+
+    console.log(`🎯 [PointsDisplay] Render - Available points: ${availablePoints}, Animating: ${isAnimating}, ShowDelta: ${showDelta}, Delta: ${pointDelta}`);
 
     if (loading && !points) {
       return (
