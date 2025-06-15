@@ -1,6 +1,5 @@
 
 
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -63,16 +62,15 @@ const AppRoutes = () => {
   );
 };
 
-// Enhanced PointsDisplay Manager that responds immediately to points changes
+// Simplified PointsDisplay Manager without infinite loops
 const PointsDisplayManager = () => {
   const { points } = useUserPoints();
   const pointsDisplayRef = useRef<any>(null);
   const lastKnownPointsRef = useRef<number | null>(null);
-  const [renderKey, setRenderKey] = useState(0);
 
-  console.log(`🎯 [PointsDisplayManager] RENDER #${renderKey} - Points object:`, points);
-  console.log(`🎯 [PointsDisplayManager] RENDER #${renderKey} - LastKnown: ${lastKnownPointsRef.current}`);
-  console.log(`🎯 [PointsDisplayManager] RENDER #${renderKey} - Ref current:`, pointsDisplayRef.current);
+  console.log(`🎯 [PointsDisplayManager] RENDER - Points object:`, points);
+  console.log(`🎯 [PointsDisplayManager] RENDER - LastKnown: ${lastKnownPointsRef.current}`);
+  console.log(`🎯 [PointsDisplayManager] RENDER - Ref current:`, pointsDisplayRef.current);
 
   // Direct effect that triggers immediately when points.available_points changes
   useEffect(() => {
@@ -103,18 +101,14 @@ const PointsDisplayManager = () => {
     // Update the ref immediately
     lastKnownPointsRef.current = currentPoints;
     console.log(`📝 [PointsDisplayManager] Updated lastKnownPointsRef to ${currentPoints}`);
-    
-    // Force a re-render to ensure we capture all changes
-    setRenderKey(prev => prev + 1);
-    console.log(`🔄 [PointsDisplayManager] Forced re-render with key ${renderKey + 1}`);
-  }, [points, points?.available_points, renderKey]); // Watch both the entire points object AND the specific value
+  }, [points?.available_points]); // Only watch the specific value, not the entire object
 
-  console.log(`🎯 [PointsDisplayManager] About to render PointsDisplay with ref (render #${renderKey})`);
+  console.log(`🎯 [PointsDisplayManager] About to render PointsDisplay with ref`);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in">
       <div className="p-1.5 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/15 backdrop-blur-sm shadow-lg">
-        <PointsDisplay ref={pointsDisplayRef} key={`points-${renderKey}`} />
+        <PointsDisplay ref={pointsDisplayRef} />
       </div>
     </div>
   );
@@ -133,7 +127,7 @@ const App = () => {
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
                   
-                  {/* Enhanced PointsDisplay management with detailed logging */}
+                  {/* Fixed PointsDisplay management without infinite loops */}
                   <PointsDisplayManager />
                 </RewardProvider>
               </TaskProvider>
@@ -148,5 +142,4 @@ const App = () => {
 };
 
 export default App;
-
 
