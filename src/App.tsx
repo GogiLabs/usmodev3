@@ -61,14 +61,14 @@ const AppRoutes = () => {
   );
 };
 
-// Simplified PointsDisplay Manager with direct animation triggering
+// Fixed PointsDisplay Manager with direct value watching
 const PointsDisplayManager = () => {
   const { points } = useUserPoints();
   const [lastKnownPoints, setLastKnownPoints] = useState<number | null>(null);
   const pointsDisplayRef = useRef<any>(null);
 
   useEffect(() => {
-    console.log(`🔍 [PointsDisplayManager] Points effect triggered. Points:`, points);
+    console.log(`🔍 [PointsDisplayManager] Points effect triggered. Full points object:`, points);
     
     if (!points) {
       console.log(`⚠️ [PointsDisplayManager] No points data, skipping`);
@@ -76,7 +76,7 @@ const PointsDisplayManager = () => {
     }
 
     const currentPoints = points.available_points;
-    console.log(`🔍 [PointsDisplayManager] Current points: ${currentPoints}, Last known: ${lastKnownPoints}`);
+    console.log(`🔍 [PointsDisplayManager] Current available_points: ${currentPoints}, Last known: ${lastKnownPoints}`);
     
     // Only trigger animation if we have a previous value and it's different
     if (lastKnownPoints !== null && lastKnownPoints !== currentPoints) {
@@ -86,18 +86,20 @@ const PointsDisplayManager = () => {
         console.log(`🚀 [PointsDisplayManager] Triggering animation via ref`);
         pointsDisplayRef.current.animatePoints(currentPoints, lastKnownPoints);
       } else {
-        console.log(`❌ [PointsDisplayManager] Ref or animatePoints method not available`);
+        console.log(`❌ [PointsDisplayManager] Ref or animatePoints method not available. Ref:`, pointsDisplayRef.current);
       }
+    } else if (lastKnownPoints === null) {
+      console.log(`🏁 [PointsDisplayManager] First time setting points to ${currentPoints}`);
     } else {
-      console.log(`🛑 [PointsDisplayManager] No animation needed (first load or same value)`);
+      console.log(`🛑 [PointsDisplayManager] No animation needed (same value: ${currentPoints})`);
     }
     
     // Always update the last known points
-    console.log(`📝 [PointsDisplayManager] Updating lastKnownPoints to ${currentPoints}`);
+    console.log(`📝 [PointsDisplayManager] Updating lastKnownPoints from ${lastKnownPoints} to ${currentPoints}`);
     setLastKnownPoints(currentPoints);
-  }, [points?.available_points, lastKnownPoints]); // Watch the specific value, not the whole object
+  }, [points?.available_points, lastKnownPoints]); // Watch the specific value
 
-  console.log(`🎯 [PointsDisplayManager] Render - Points: ${points?.available_points}, LastKnown: ${lastKnownPoints}`);
+  console.log(`🎯 [PointsDisplayManager] Render - Points object:`, points, `LastKnown: ${lastKnownPoints}`);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in">
@@ -121,7 +123,7 @@ const App = () => {
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
                   
-                  {/* Direct PointsDisplay management */}
+                  {/* Fixed PointsDisplay management with better logging */}
                   <PointsDisplayManager />
                 </RewardProvider>
               </TaskProvider>
