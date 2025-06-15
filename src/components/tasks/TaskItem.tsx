@@ -89,7 +89,7 @@ export function TaskItem({ task }: TaskItemProps) {
         }
         
         // Apply optimistic updates IMMEDIATELY for instant feedback
-        updatePointsOptimistically(earnedPoints);
+        //updatePointsOptimistically(earnedPoints);
         
         // This is now just for server-side persistence
         console.log(`🔄 [TaskItem] Calling completeTask from context`);

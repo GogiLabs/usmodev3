@@ -207,7 +207,7 @@ export const TaskProvider = ({ children }: { children: React.ReactNode }) => {
         if (taskToDelete && taskToDelete.completed) {
           console.log('🔄 [TaskProvider] Refetching points after deleting completed task');
           // If task was completed, we need to update points
-          updatePointsOptimistically(-taskToDelete.points);
+          //updatePointsOptimistically(-taskToDelete.points);
           await refetchPoints();
           console.log('✅ [TaskProvider] Points refetched after task deletion');
         }

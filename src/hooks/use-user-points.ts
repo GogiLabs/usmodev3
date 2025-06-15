@@ -31,7 +31,7 @@ export function useUserPoints() {
     fetchCounter.current += 1;
     const fetchId = fetchCounter.current;
     const startTime = performance.now();
-    console.log(`🔄 [useUserPoints] Fetching points (#${fetchId}) for user: ${user.id}`);
+      console.log(`🔄 [useUserPoints] Fetching points (#${fetchId}) for user: ${user.id}`);
     
     try {
       setLoading(true);
