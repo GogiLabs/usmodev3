@@ -63,6 +63,8 @@ export function TaskItem({ task }: TaskItemProps) {
       showAuthRequiredToast();
       return;
     }
+
+    console.log(`🗺️ This is the function call you are looking for`);
     
     if (!task.completed) {
       taskCompletionTimeRef.current = performance.now();
