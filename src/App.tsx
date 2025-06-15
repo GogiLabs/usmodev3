@@ -77,10 +77,15 @@ const PointsDisplayManager = () => {
     // If we have a previous points value and it's different, trigger animation
     if (lastKnownPoints !== null && lastKnownPoints !== currentPoints) {
       console.log(`✨ [PointsDisplayManager] Triggering animation: ${lastKnownPoints} -> ${currentPoints}`);
+      console.log(`🎯 [PointsDisplayManager] Ref exists: ${!!pointsDisplayRef.current}`);
+      console.log(`🎯 [PointsDisplayManager] Ref has animatePoints: ${!!pointsDisplayRef.current?.animatePoints}`);
       
       // Directly call animation on the component
       if (pointsDisplayRef.current && pointsDisplayRef.current.animatePoints) {
+        console.log(`🚀 [PointsDisplayManager] Calling animatePoints`);
         pointsDisplayRef.current.animatePoints(currentPoints, lastKnownPoints);
+      } else {
+        console.log(`❌ [PointsDisplayManager] Cannot call animation - ref not ready`);
       }
     }
     

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,11 +17,7 @@ export function useUserPoints() {
   const lastFetchedPoints = useRef<UserPoints | null>(null);
   const fetchCounter = useRef(0);
   const lastRealTimeUpdateTime = useRef<number>(0);
-  const pointsUpdateListeners = useRef<Array<(points: UserPoints) => void>>([]);
   const optimisticUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
-  
-  // Ensure state sync across hook instances
-  const globalUpdateId = useRef<number>(0);
   
   const fetchUserPoints = useCallback(async (forceUpdate = false) => {
     if (!user) return;
@@ -31,7 +26,7 @@ export function useUserPoints() {
     fetchCounter.current += 1;
     const fetchId = fetchCounter.current;
     const startTime = performance.now();
-      console.log(`🔄 [useUserPoints] Fetching points (#${fetchId}) for user: ${user.id}`);
+    console.log(`🔄 [useUserPoints] Fetching points (#${fetchId}) for user: ${user.id}`);
     
     try {
       setLoading(true);
@@ -60,26 +55,6 @@ export function useUserPoints() {
         console.log(`⚡ [useUserPoints] Force updating points from ${previousPoints?.available_points} to ${newPoints.available_points}`);
         setPoints({...newPoints}); // Create new object to ensure React detects the change
         initialized.current = true;
-        
-        // Notify listeners about the points update - CRITICAL FIX: show listener count
-        const listenerCount = pointsUpdateListeners.current.length;
-        console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of points update`);
-        
-        // Generate a unique update ID for this update
-        globalUpdateId.current += 1;
-        const updateId = globalUpdateId.current;
-        
-        // Make a copy to avoid modification issues during iteration
-        const currentListeners = [...pointsUpdateListeners.current];
-        
-        currentListeners.forEach(listener => {
-          try {
-            console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
-            listener(newPoints);
-          } catch (err) {
-            console.error('[useUserPoints] Error in listener:', err);
-          }
-        });
         return;
       }
       
@@ -96,27 +71,6 @@ export function useUserPoints() {
         if (previousPoints === null || 
             previousPoints.available_points !== newPoints.available_points) {
           console.log(`🔄 [useUserPoints] Points changed from ${previousPoints?.available_points} to ${newPoints.available_points}`);
-          
-          // Notify listeners about the points update - CRITICAL FIX: show listener count
-          const listenerCount = pointsUpdateListeners.current.length;
-          console.log(`🔔 [useUserPoints] Notifying ${listenerCount} listeners of points update`);
-          
-          // Generate a unique update ID for this update
-          globalUpdateId.current += 1;
-          const updateId = globalUpdateId.current;
-          
-          // Make a copy to avoid modification issues during iteration
-          const currentListeners = [...pointsUpdateListeners.current];
-          
-          currentListeners.forEach(listener => {
-            try {
-              console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
-              listener(newPoints);
-            } catch (err) {
-              console.error('[useUserPoints] Error in listener:', err);
-            }
-          });
-          
           return { ...newPoints };
         }
         
@@ -153,24 +107,6 @@ export function useUserPoints() {
     // Update state immediately for responsive UI
     setPoints(newPoints);
     
-    // Generate a unique update ID for this update
-    globalUpdateId.current += 1;
-    const updateId = globalUpdateId.current;
-    
-    // CRITICAL FIX: Make a copy of listeners array before iterating
-    const listenerCount = pointsUpdateListeners.current.length;
-    console.log(`🔔 Govind [useUserPoints] Notifying ${listenerCount} listeners of optimistic points update (ID: ${updateId})`);
-    
-    const currentListeners = [...pointsUpdateListeners.current];
-    currentListeners.forEach(listener => {
-      try {
-        console.log(`📣 [useUserPoints] Calling listener with update ID: ${updateId}`);
-        listener(newPoints);
-      } catch (err) {
-        console.error('[useUserPoints] Error in listener during optimistic update:', err);
-      }
-    });
-    
     // Schedule a real fetch after a short delay to ensure we have the right data
     optimisticUpdateTimeout.current = setTimeout(() => {
       fetchUserPoints(true);
@@ -186,32 +122,6 @@ export function useUserPoints() {
     // Force immediate update for realtime events with highest priority
     return fetchUserPoints(true);
   }, [fetchUserPoints]);
-
-  // Add a new subscribe method to listen for points updates
-  const subscribeToPointsUpdates = useCallback((callback: (points: UserPoints) => void) => {
-    console.log(`➕ [useUserPoints] Adding points update listener`);
-    
-    // CRITICAL FIX: Check if listener already exists to prevent duplicates
-    const existingIndex = pointsUpdateListeners.current.findIndex(cb => cb === callback);
-    if (existingIndex >= 0) {
-      console.log(`⚠️ [useUserPoints] Listener already exists, not adding duplicate`);
-    } else {
-      // Add the listener to our array
-      pointsUpdateListeners.current = [...pointsUpdateListeners.current, callback];
-    }
-    
-    // If we already have points, call the callback immediately
-    if (points) {
-      console.log(`🔄 [useUserPoints] Initial points callback with existing data:`, points);
-      callback(points);
-    }
-    
-    // Return unsubscribe function
-    return () => {
-      console.log(`➖ [useUserPoints] Removing points update listener`);
-      pointsUpdateListeners.current = pointsUpdateListeners.current.filter(cb => cb !== callback);
-    };
-  }, [points]);
 
   // Set up Supabase subscription for realtime updates
   useEffect(() => {
@@ -265,7 +175,6 @@ export function useUserPoints() {
     refetch, 
     getLastRealtimeUpdateTime,
     lastRealtimeUpdateTime: lastRealTimeUpdateTime.current,
-    subscribeToPointsUpdates,
     updatePointsOptimistically
   };
 }
