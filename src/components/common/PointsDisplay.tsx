@@ -38,15 +38,17 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
 
     // Function to trigger animation
     const animatePointsChange = useCallback((newPoints: number, previousPoints: number) => {
-      // Skip if no change or if we don't know the previous points
-      if (previousPoints === null || newPoints === previousPoints) {
-        console.log(`🚫 [PointsDisplay] No points change to animate: ${previousPoints} -> ${newPoints}`);
+      console.log(`🎯 [PointsDisplay] Animation called: ${previousPoints} -> ${newPoints}`);
+      
+      // Skip if no change
+      if (previousPoints === newPoints) {
+        console.log(`🚫 [PointsDisplay] No change, skipping animation`);
         return;
       }
       
       const delta = newPoints - previousPoints;
       
-      console.log(`✨ [PointsDisplay] Triggering animation: points ${previousPoints} -> ${newPoints}, delta ${delta}`);
+      console.log(`✨ [PointsDisplay] Starting animation with delta: ${delta}`);
       
       // Clear any pending animations
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
@@ -59,12 +61,14 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       
       // Clear animations after delay
       deltaTimeoutRef.current = setTimeout(() => {
+        console.log(`🎭 [PointsDisplay] Hiding delta animation`);
         setShowDelta(false);
-      }, 2000); // 2000ms visibility for delta
+      }, 2000);
       
       animationTimeoutRef.current = setTimeout(() => {
+        console.log(`🎭 [PointsDisplay] Ending animation`);
         setIsAnimating(false);
-      }, 2300); // 2300ms for animation
+      }, 2300);
     }, []);
 
     // Expose the animatePointsChange method via ref
@@ -170,7 +174,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                   color: ['#9b87f5', '#ec4899', '#9b87f5']
                 } : {}}
                 transition={{ duration: 1.2 }}
-                key={availablePoints} // Force re-render when points change
+                key={availablePoints}
               >
                 {availablePoints}
               </motion.span>

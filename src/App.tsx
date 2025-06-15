@@ -61,11 +61,10 @@ const AppRoutes = () => {
   );
 };
 
-// Simplified PointsDisplay Manager
+// Direct PointsDisplay Manager with ref-based animation
 const PointsDisplayManager = () => {
   const { points } = useUserPoints();
-  const [pointsKey, setPointsKey] = useState(0);
-  const [lastPointsValue, setLastPointsValue] = useState<number | null>(null);
+  const [lastKnownPoints, setLastKnownPoints] = useState<number | null>(null);
   const pointsDisplayRef = useRef<any>(null);
 
   useEffect(() => {
@@ -73,28 +72,26 @@ const PointsDisplayManager = () => {
 
     const currentPoints = points.available_points;
     
-    // If points changed and we have a previous value, trigger animation
-    if (lastPointsValue !== null && lastPointsValue !== currentPoints) {
-      console.log(`🔄 [PointsDisplayManager] Points changed from ${lastPointsValue} to ${currentPoints}`);
+    console.log(`🔍 [PointsDisplayManager] Points check: current=${currentPoints}, last=${lastKnownPoints}`);
+    
+    // If we have a previous points value and it's different, trigger animation
+    if (lastKnownPoints !== null && lastKnownPoints !== currentPoints) {
+      console.log(`✨ [PointsDisplayManager] Triggering animation: ${lastKnownPoints} -> ${currentPoints}`);
       
-      // Trigger animation on current component
-      if (pointsDisplayRef.current) {
-        pointsDisplayRef.current.animatePoints(currentPoints, lastPointsValue);
+      // Directly call animation on the component
+      if (pointsDisplayRef.current && pointsDisplayRef.current.animatePoints) {
+        pointsDisplayRef.current.animatePoints(currentPoints, lastKnownPoints);
       }
-      
-      // Force remount after animation to reset state
-      setTimeout(() => {
-        setPointsKey(prev => prev + 1);
-      }, 2500); // Wait for animation to complete
     }
     
-    setLastPointsValue(currentPoints);
-  }, [points, lastPointsValue]);
+    // Update last known points
+    setLastKnownPoints(currentPoints);
+  }, [points, lastKnownPoints]);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in">
       <div className="p-1.5 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/15 backdrop-blur-sm shadow-lg">
-        <PointsDisplay key={pointsKey} ref={pointsDisplayRef} />
+        <PointsDisplay ref={pointsDisplayRef} />
       </div>
     </div>
   );
@@ -113,7 +110,7 @@ const App = () => {
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
                   
-                  {/* Simplified PointsDisplay management */}
+                  {/* Direct PointsDisplay management */}
                   <PointsDisplayManager />
                 </RewardProvider>
               </TaskProvider>
