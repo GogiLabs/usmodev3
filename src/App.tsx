@@ -61,9 +61,9 @@ const AppRoutes = () => {
   );
 };
 
-// Component to handle PointsDisplay mounting/unmounting
+// Simplified PointsDisplay Manager
 const PointsDisplayManager = () => {
-  const { points, subscribeToPointsUpdates } = useUserPoints();
+  const { points } = useUserPoints();
   const [pointsKey, setPointsKey] = useState(0);
   const [lastPointsValue, setLastPointsValue] = useState<number | null>(null);
   const pointsDisplayRef = useRef<any>(null);
@@ -73,51 +73,23 @@ const PointsDisplayManager = () => {
 
     const currentPoints = points.available_points;
     
-    // If points changed, trigger animation and force remount
+    // If points changed and we have a previous value, trigger animation
     if (lastPointsValue !== null && lastPointsValue !== currentPoints) {
-      console.log(`🔄 [PointsDisplayManager] Points changed from ${lastPointsValue} to ${currentPoints}, forcing remount`);
+      console.log(`🔄 [PointsDisplayManager] Points changed from ${lastPointsValue} to ${currentPoints}`);
       
-      // Trigger animation on current component before remount
+      // Trigger animation on current component
       if (pointsDisplayRef.current) {
         pointsDisplayRef.current.animatePoints(currentPoints, lastPointsValue);
       }
       
-      // Force remount after animation
+      // Force remount after animation to reset state
       setTimeout(() => {
         setPointsKey(prev => prev + 1);
-      }, 100);
+      }, 2500); // Wait for animation to complete
     }
     
     setLastPointsValue(currentPoints);
   }, [points, lastPointsValue]);
-
-  // Subscribe to points updates for real-time changes
-  useEffect(() => {
-    if (!points) return;
-
-    const unsubscribe = subscribeToPointsUpdates((newPointsData) => {
-      const newPointsValue = newPointsData.available_points;
-      const previousPointsValue = lastPointsValue === null ? newPointsValue : lastPointsValue;
-      
-      console.log(`📊 [PointsDisplayManager] Real-time points update: ${previousPointsValue} -> ${newPointsValue}`);
-      
-      if (previousPointsValue !== newPointsValue) {
-        // Trigger animation on current component
-        if (pointsDisplayRef.current) {
-          pointsDisplayRef.current.animatePoints(newPointsValue, previousPointsValue);
-        }
-        
-        setLastPointsValue(newPointsValue);
-        
-        // Force remount after animation
-        setTimeout(() => {
-          setPointsKey(prev => prev + 1);
-        }, 2500); // Wait for animation to complete
-      }
-    });
-
-    return unsubscribe;
-  }, [points, subscribeToPointsUpdates, lastPointsValue]);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in">
@@ -141,7 +113,7 @@ const App = () => {
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
                   
-                  {/* PointsDisplay with forced remount capability */}
+                  {/* Simplified PointsDisplay management */}
                   <PointsDisplayManager />
                 </RewardProvider>
               </TaskProvider>

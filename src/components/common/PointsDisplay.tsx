@@ -107,8 +107,8 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
               className
             )}
             initial={{ scale: 1 }}
-            animate={isAnimating ? { scale: [1, 1.2, 1] } : { scale: 1 }} // Enhanced scale effect
-            transition={{ duration: 1.0 }} // Extended animation duration
+            animate={isAnimating ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+            transition={{ duration: 1.0 }}
             onClick={handleManualRefresh}
             data-testid="points-display"
           >
@@ -117,9 +117,9 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                 {isAnimating && (
                   <motion.div
                     initial={{ scale: 0, rotate: 0 }}
-                    animate={{ scale: 1.8, rotate: 720 }} // More rotation and increased scale
+                    animate={{ scale: 1.8, rotate: 720 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    transition={{ duration: 1.2 }} // Extended duration
+                    transition={{ duration: 1.2 }}
                     className="absolute -top-1 -right-1"
                   >
                     <Sparkles className="h-4 w-4 text-yellow-400" />
@@ -130,7 +130,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
               <motion.div
                 animate={isAnimating ? { 
                   scale: [1, 1.8, 1],
-                  rotate: [0, 25, -25, 0] // Enhanced wiggle effect
+                  rotate: [0, 25, -25, 0]
                 } : {}}
                 transition={{ duration: 1.0 }}
               >
@@ -146,13 +146,13 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                 {showDelta && pointDelta !== 0 && (
                   <motion.span 
                     className={cn(
-                      "absolute -top-7 right-0 text-xl font-bold", // Increased size and position
+                      "absolute -top-7 right-0 text-xl font-bold",
                       pointDelta > 0 ? "text-green-600" : "text-red-600"
                     )}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.7 }} // Extended duration
+                    transition={{ duration: 0.7 }}
                     key={`delta-${Date.now()}`}
                   >
                     {pointDelta > 0 ? `+${pointDelta}` : pointDelta}
@@ -169,7 +169,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
                   scale: [1, 1.5, 1],
                   color: ['#9b87f5', '#ec4899', '#9b87f5']
                 } : {}}
-                transition={{ duration: 1.2 }} // Extended duration
+                transition={{ duration: 1.2 }}
                 key={availablePoints} // Force re-render when points change
               >
                 {availablePoints}
@@ -178,7 +178,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
               <motion.div
                 animate={isAnimating ? { 
                   rotate: [0, 720],
-                  scale: [1, 1.8, 1] // Enhanced scale effect
+                  scale: [1, 1.8, 1]
                 } : {}}
                 transition={{ duration: 1.0 }}
               >
