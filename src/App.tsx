@@ -13,10 +13,11 @@ import { TaskProvider } from "./contexts/task";
 import { RewardProvider } from "./contexts/reward/RewardContext";
 import { NetworkStatusIndicator } from "./components/common/NetworkStatusIndicator";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
-import { lazy, Suspense, useRef } from "react";
+import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import { GuestToAuthModal } from "./components/common/GuestToAuthModal";
 import { PointsDisplay } from "./components/common/PointsDisplay";
+import { useUserPoints } from "./hooks/use-user-points";
 
 // Configure React Query with better error handling
 const queryClient = new QueryClient({
@@ -60,6 +61,73 @@ const AppRoutes = () => {
   );
 };
 
+// Component to handle PointsDisplay mounting/unmounting
+const PointsDisplayManager = () => {
+  const { points, subscribeToPointsUpdates } = useUserPoints();
+  const [pointsKey, setPointsKey] = useState(0);
+  const [lastPointsValue, setLastPointsValue] = useState<number | null>(null);
+  const pointsDisplayRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!points) return;
+
+    const currentPoints = points.available_points;
+    
+    // If points changed, trigger animation and force remount
+    if (lastPointsValue !== null && lastPointsValue !== currentPoints) {
+      console.log(`🔄 [PointsDisplayManager] Points changed from ${lastPointsValue} to ${currentPoints}, forcing remount`);
+      
+      // Trigger animation on current component before remount
+      if (pointsDisplayRef.current) {
+        pointsDisplayRef.current.animatePoints(currentPoints, lastPointsValue);
+      }
+      
+      // Force remount after animation
+      setTimeout(() => {
+        setPointsKey(prev => prev + 1);
+      }, 100);
+    }
+    
+    setLastPointsValue(currentPoints);
+  }, [points, lastPointsValue]);
+
+  // Subscribe to points updates for real-time changes
+  useEffect(() => {
+    if (!points) return;
+
+    const unsubscribe = subscribeToPointsUpdates((newPointsData) => {
+      const newPointsValue = newPointsData.available_points;
+      const previousPointsValue = lastPointsValue === null ? newPointsValue : lastPointsValue;
+      
+      console.log(`📊 [PointsDisplayManager] Real-time points update: ${previousPointsValue} -> ${newPointsValue}`);
+      
+      if (previousPointsValue !== newPointsValue) {
+        // Trigger animation on current component
+        if (pointsDisplayRef.current) {
+          pointsDisplayRef.current.animatePoints(newPointsValue, previousPointsValue);
+        }
+        
+        setLastPointsValue(newPointsValue);
+        
+        // Force remount after animation
+        setTimeout(() => {
+          setPointsKey(prev => prev + 1);
+        }, 2500); // Wait for animation to complete
+      }
+    });
+
+    return unsubscribe;
+  }, [points, subscribeToPointsUpdates, lastPointsValue]);
+
+  return (
+    <div className="fixed top-4 right-4 z-50 animate-fade-in">
+      <div className="p-1.5 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/15 backdrop-blur-sm shadow-lg">
+        <PointsDisplay key={pointsKey} ref={pointsDisplayRef} />
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
   return (
     <ErrorBoundary>
@@ -73,12 +141,8 @@ const App = () => {
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
                   
-                  {/* PointsDisplay now handles all animations internally */}
-                  <div className="fixed top-4 right-4 z-50 animate-fade-in">
-                    <div className="p-1.5 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/15 backdrop-blur-sm shadow-lg">
-                      <PointsDisplay />
-                    </div>
-                  </div>
+                  {/* PointsDisplay with forced remount capability */}
+                  <PointsDisplayManager />
                 </RewardProvider>
               </TaskProvider>
             </AuthProvider>

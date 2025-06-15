@@ -22,16 +22,12 @@ interface PointsDisplayProps {
 
 export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>(
   ({ className }, ref) => {
-    const { points, loading, refetch, subscribeToPointsUpdates } = useUserPoints();
+    const { points, loading, refetch } = useUserPoints();
     const [isAnimating, setIsAnimating] = useState(false);
-    const [lastPoints, setLastPoints] = useState<number | null>(null);
     const [pointDelta, setPointDelta] = useState<number>(0);
     const [showDelta, setShowDelta] = useState(false);
     const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const animationPendingRef = useRef<boolean>(false);
-    const updateIdRef = useRef<number>(0);
-    const unsubscribeRef = useRef<(() => void) | null>(null);
     
     const { isAuthenticated } = useAuth();
 
@@ -49,10 +45,8 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       }
       
       const delta = newPoints - previousPoints;
-      updateIdRef.current += 1;
-      const currentUpdateId = updateIdRef.current;
       
-      console.log(`✨ [PointsDisplay] Triggering animation: points ${previousPoints} -> ${newPoints}, delta ${delta} (update ID: ${currentUpdateId})`);
+      console.log(`✨ [PointsDisplay] Triggering animation: points ${previousPoints} -> ${newPoints}, delta ${delta}`);
       
       // Clear any pending animations
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
@@ -62,7 +56,6 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       setPointDelta(delta);
       setIsAnimating(true);
       setShowDelta(true);
-      setLastPoints(newPoints);
       
       // Clear animations after delay
       deltaTimeoutRef.current = setTimeout(() => {
@@ -71,7 +64,6 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       
       animationTimeoutRef.current = setTimeout(() => {
         setIsAnimating(false);
-        animationPendingRef.current = false;
       }, 2300); // 2300ms for animation
     }, []);
 
@@ -79,59 +71,8 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     useImperativeHandle(ref, () => ({
       animatePoints: animatePointsChange
     }), [animatePointsChange]);
-
-    // Initialize lastPoints when points first load
-    useEffect(() => {
-      if (points && lastPoints === null) {
-        console.log(`🏁 [PointsDisplay] Initializing lastPoints to:`, points.available_points);
-        setLastPoints(points.available_points);
-      }
-    }, [points, lastPoints]);
     
-    // Set up points update subscription - ONLY when authenticated and points are loaded
-    useEffect(() => {
-      if (!isAuthenticated || !points) {
-        console.log(`⚠️ [PointsDisplay] Not ready for listener setup - authenticated: ${isAuthenticated}, points: ${!!points}`);
-        return;
-      }
-      
-      if (unsubscribeRef.current) {
-        console.log(`⚠️ [PointsDisplay] Listener already registered, skipping duplicate setup`);
-        return;
-      }
-      
-      console.log(`🔌 [PointsDisplay] Setting up points update subscription`);
-      
-      const unsubscribe = subscribeToPointsUpdates((newPointsData) => {
-        const newPointsValue = newPointsData.available_points;
-        const previousPointsValue = lastPoints === null ? newPointsValue : lastPoints;
-        
-        console.log(`📊 [PointsDisplay] Points update received: ${previousPointsValue} -> ${newPointsValue}`);
-        
-        if (previousPointsValue !== newPointsValue) {
-          // Handle animation queuing
-          if (animationPendingRef.current) {
-            console.log(`🔄 [PointsDisplay] Animation already pending, updating final target to: ${newPointsValue}`);
-          } else {
-            animationPendingRef.current = true;
-            animatePointsChange(newPointsValue, previousPointsValue);
-          }
-        }
-      });
-      
-      // Store the unsubscribe function
-      unsubscribeRef.current = unsubscribe;
-      
-      return () => {
-        console.log('🔌 [PointsDisplay] Cleaning up points subscription');
-        if (unsubscribeRef.current) {
-          unsubscribeRef.current();
-          unsubscribeRef.current = null;
-        }
-      };
-    }, [isAuthenticated, points, subscribeToPointsUpdates, animatePointsChange]); // Wait for both auth AND points
-    
-    // Cleanup function - separate from subscription management
+    // Cleanup function
     useEffect(() => {
       return () => {
         if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
