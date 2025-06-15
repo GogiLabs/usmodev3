@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
@@ -23,28 +24,17 @@ export function TaskItem({ task }: TaskItemProps) {
   const componentRef = useRef<HTMLDivElement>(null);
   const taskCompletionTimeRef = useRef<number>(0);
   
-  // Add logging right at the component render
-  console.log(`🔍 [TaskItem] Rendering task ${task.id} - completed: ${task.completed}, description: "${task.description}"`);
-  
   const handleComplete = async () => {
-    console.log(`🚨 [TaskItem] BUTTON CLICKED! Task ID: ${task.id}, Completed: ${task.completed}, Authenticated: ${isAuthenticated}`);
-    
     if (!isAuthenticated) {
-      console.log(`❌ [TaskItem] User not authenticated, showing auth toast`);
       showAuthRequiredToast();
       return;
     }
-
-    console.log(`🗺️ This is the function call you are looking for`);
     
     if (!task.completed) {
       taskCompletionTimeRef.current = performance.now();
-      console.log(`🎯 [TaskItem] Starting task completion for task: ${task.id}`);
       setIsCompleting(true);
       
       try {
-        // Just complete the task - PointsDisplay will handle the animation
-        console.log(`🔄 [TaskItem] Calling completeTask from context`);
         await completeTask(task.id);
         const completionDuration = (performance.now() - taskCompletionTimeRef.current).toFixed(2);
         console.log(`✅ [TaskItem] Task completed: ${task.id} in ${completionDuration}ms`);
@@ -56,21 +46,7 @@ export function TaskItem({ task }: TaskItemProps) {
           setIsCompleting(false);
         }, 500);
       }
-    } else {
-      console.log(`⚠️ [TaskItem] Task ${task.id} is already completed, ignoring click`);
     }
-  };
-  
-  // Add a click handler that logs ALL button clicks
-  const handleButtonClick = (e: React.MouseEvent) => {
-    console.log(`🖱️ [TaskItem] Button click detected! Event:`, e);
-    console.log(`🖱️ [TaskItem] Button disabled state:`, task.completed);
-    console.log(`🖱️ [TaskItem] Task state:`, { id: task.id, completed: task.completed, description: task.description });
-    console.log(`🖱️ [TaskItem] Click target:`, e.target);
-    console.log(`🖱️ [TaskItem] Current target:`, e.currentTarget);
-    
-    // Call the actual handler
-    handleComplete();
   };
   
   const handleDelete = async () => {
@@ -86,7 +62,6 @@ export function TaskItem({ task }: TaskItemProps) {
       await deleteTask(task.id);
       console.log(`✅ [TaskItem] Task deleted: ${task.id}`);
       
-      // Deletion is now handled properly via event system
     } catch (error: any) {
       console.error(`❌ [TaskItem] Error deleting task:`, error);
       setIsDeleting(false);
@@ -125,8 +100,6 @@ export function TaskItem({ task }: TaskItemProps) {
     isCompleting && 'bg-green-50'
   );
   
-  console.log(`🎯 [TaskItem] About to render button for task ${task.id} - disabled: ${task.completed}`);
-  
   return (
     <div 
       className={taskClasses} 
@@ -142,10 +115,9 @@ export function TaskItem({ task }: TaskItemProps) {
             task.completed ? "bg-primary/20 hover:bg-primary/30" : "hover:bg-primary/10",
             isCompleting && "bg-primary/30"
           )}
-          onClick={handleButtonClick}
+          onClick={handleComplete}
           disabled={task.completed}
           data-testid={`complete-task-${task.id}`}
-          title={`DEBUG: Task ${task.id} - ${task.completed ? 'COMPLETED' : 'INCOMPLETE'}`}
         >
           <CheckCircle2 
             className={cn(
@@ -155,10 +127,6 @@ export function TaskItem({ task }: TaskItemProps) {
             )}
             fill={task.completed || isCompleting ? "currentColor" : "none"} 
           />
-          {/* Add debug text overlay */}
-          <span className="absolute -bottom-6 left-0 text-xs text-red-500 font-bold bg-white px-1 rounded">
-            {task.completed ? 'DONE' : 'CLICK'}
-          </span>
         </Button>
         
         <div className="flex flex-col flex-1 min-w-0">
@@ -166,7 +134,7 @@ export function TaskItem({ task }: TaskItemProps) {
             "text-sm font-medium truncate",
             task.completed && "line-through text-muted-foreground"
           )}>
-            {task.description} [DEBUG: ID-{task.id}]
+            {task.description}
           </span>
           
           <div className="flex items-center gap-2 mt-0.5">

@@ -6,7 +6,6 @@ import { PairedUserBanner } from "@/components/common/PairedUserBanner";
 import { PairPrompt } from "@/components/common/PairPrompt";
 import { AuthRequiredBanner } from "@/components/common/AuthRequiredBanner";
 import { EmptyStateBanner } from "@/components/dashboard/EmptyStateBanner";
-import { PointsDisplay } from "@/components/common/PointsDisplay";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/common/Header";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,8 +44,6 @@ export function Dashboard() {
         ) : (
           <PairPrompt className="mt-1" />
         )}
-        
-        <PointsDisplay className="mt-2" />
         
         {/* Tab Navigation */}
         <div className="flex border-b">
