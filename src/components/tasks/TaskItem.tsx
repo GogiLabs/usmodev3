@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
@@ -23,6 +22,9 @@ export function TaskItem({ task }: TaskItemProps) {
   const { toast } = useToast();
   const componentRef = useRef<HTMLDivElement>(null);
   const taskCompletionTimeRef = useRef<number>(0);
+  
+  // Add logging right at the component render
+  console.log(`🔍 [TaskItem] Rendering task ${task.id} - completed: ${task.completed}, description: "${task.description}"`);
   
   const handleComplete = async () => {
     console.log(`🚨 [TaskItem] BUTTON CLICKED! Task ID: ${task.id}, Completed: ${task.completed}, Authenticated: ${isAuthenticated}`);
@@ -64,6 +66,8 @@ export function TaskItem({ task }: TaskItemProps) {
     console.log(`🖱️ [TaskItem] Button click detected! Event:`, e);
     console.log(`🖱️ [TaskItem] Button disabled state:`, task.completed);
     console.log(`🖱️ [TaskItem] Task state:`, { id: task.id, completed: task.completed, description: task.description });
+    console.log(`🖱️ [TaskItem] Click target:`, e.target);
+    console.log(`🖱️ [TaskItem] Current target:`, e.currentTarget);
     
     // Call the actual handler
     handleComplete();
@@ -121,6 +125,8 @@ export function TaskItem({ task }: TaskItemProps) {
     isCompleting && 'bg-green-50'
   );
   
+  console.log(`🎯 [TaskItem] About to render button for task ${task.id} - disabled: ${task.completed}`);
+  
   return (
     <div 
       className={taskClasses} 
@@ -138,6 +144,7 @@ export function TaskItem({ task }: TaskItemProps) {
           )}
           onClick={handleButtonClick}
           disabled={task.completed}
+          data-testid={`complete-task-${task.id}`}
         >
           <CheckCircle2 
             className={cn(
