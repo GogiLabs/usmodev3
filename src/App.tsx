@@ -1,5 +1,3 @@
-
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -62,7 +60,7 @@ const AppRoutes = () => {
   );
 };
 
-// Simplified PointsDisplay Manager without infinite loops
+// Simplified PointsDisplayManager without infinite loops
 const PointsDisplayManager = () => {
   const { points } = useUserPoints();
   const pointsDisplayRef = useRef<any>(null);
@@ -142,4 +140,3 @@ const App = () => {
 };
 
 export default App;
-
