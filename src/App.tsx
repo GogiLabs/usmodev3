@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -61,14 +60,19 @@ const AppRoutes = () => {
   );
 };
 
-// Fixed PointsDisplay Manager with direct value watching
+// Enhanced PointsDisplay Manager with comprehensive logging
 const PointsDisplayManager = () => {
   const { points } = useUserPoints();
   const [lastKnownPoints, setLastKnownPoints] = useState<number | null>(null);
   const pointsDisplayRef = useRef<any>(null);
 
+  console.log(`🎯 [PointsDisplayManager] RENDER - Points object:`, points);
+  console.log(`🎯 [PointsDisplayManager] RENDER - LastKnown: ${lastKnownPoints}`);
+  console.log(`🎯 [PointsDisplayManager] RENDER - Ref current:`, pointsDisplayRef.current);
+
   useEffect(() => {
-    console.log(`🔍 [PointsDisplayManager] Points effect triggered. Full points object:`, points);
+    console.log(`🔍 [PointsDisplayManager] Effect triggered. Full points object:`, points);
+    console.log(`🔍 [PointsDisplayManager] Effect - lastKnownPoints:`, lastKnownPoints);
     
     if (!points) {
       console.log(`⚠️ [PointsDisplayManager] No points data, skipping`);
@@ -76,17 +80,22 @@ const PointsDisplayManager = () => {
     }
 
     const currentPoints = points.available_points;
-    console.log(`🔍 [PointsDisplayManager] Current available_points: ${currentPoints}, Last known: ${lastKnownPoints}`);
+    console.log(`🔍 [PointsDisplayManager] Current available_points: ${currentPoints}`);
+    console.log(`🔍 [PointsDisplayManager] Last known points: ${lastKnownPoints}`);
+    console.log(`🔍 [PointsDisplayManager] Points changed?: ${lastKnownPoints !== null && lastKnownPoints !== currentPoints}`);
     
     // Only trigger animation if we have a previous value and it's different
     if (lastKnownPoints !== null && lastKnownPoints !== currentPoints) {
-      console.log(`✨ [PointsDisplayManager] Points changed! ${lastKnownPoints} -> ${currentPoints}`);
+      console.log(`✨ [PointsDisplayManager] ANIMATION TRIGGER! ${lastKnownPoints} -> ${currentPoints}`);
       
+      console.log(`🔗 [PointsDisplayManager] Checking ref availability:`, pointsDisplayRef.current);
       if (pointsDisplayRef.current?.animatePoints) {
-        console.log(`🚀 [PointsDisplayManager] Triggering animation via ref`);
+        console.log(`🚀 [PointsDisplayManager] CALLING animatePoints via ref`);
         pointsDisplayRef.current.animatePoints(currentPoints, lastKnownPoints);
       } else {
-        console.log(`❌ [PointsDisplayManager] Ref or animatePoints method not available. Ref:`, pointsDisplayRef.current);
+        console.log(`❌ [PointsDisplayManager] Ref or animatePoints method not available!`);
+        console.log(`❌ [PointsDisplayManager] Ref object:`, pointsDisplayRef.current);
+        console.log(`❌ [PointsDisplayManager] Has animatePoints?:`, pointsDisplayRef.current?.animatePoints);
       }
     } else if (lastKnownPoints === null) {
       console.log(`🏁 [PointsDisplayManager] First time setting points to ${currentPoints}`);
@@ -95,11 +104,11 @@ const PointsDisplayManager = () => {
     }
     
     // Always update the last known points
-    console.log(`📝 [PointsDisplayManager] Updating lastKnownPoints from ${lastKnownPoints} to ${currentPoints}`);
+    console.log(`📝 [PointsDisplayManager] Updating lastKnownPoints: ${lastKnownPoints} -> ${currentPoints}`);
     setLastKnownPoints(currentPoints);
   }, [points?.available_points, lastKnownPoints]); // Watch the specific value
 
-  console.log(`🎯 [PointsDisplayManager] Render - Points object:`, points, `LastKnown: ${lastKnownPoints}`);
+  console.log(`🎯 [PointsDisplayManager] About to render PointsDisplay with ref`);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in">
@@ -123,7 +132,7 @@ const App = () => {
                   <NetworkStatusIndicator />
                   <GuestToAuthModal />
                   
-                  {/* Fixed PointsDisplay management with better logging */}
+                  {/* Enhanced PointsDisplay management with detailed logging */}
                   <PointsDisplayManager />
                 </RewardProvider>
               </TaskProvider>
