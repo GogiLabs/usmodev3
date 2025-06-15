@@ -31,7 +31,6 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const animationPendingRef = useRef<boolean>(false);
     const updateIdRef = useRef<number>(0);
-    const listenerRegisteredRef = useRef<boolean>(false);
     
     const { isAuthenticated } = useAuth();
 
@@ -80,18 +79,11 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       animatePoints: animatePointsChange
     }), [animatePointsChange]);
     
-    // Set up points update subscription - CRITICAL FIX: This must be stable across re-renders
+    // Set up points update subscription - this is the only component that should listen
     useEffect(() => {
       if (!isAuthenticated) return;
       
-      // Don't register duplicated listeners
-      if (listenerRegisteredRef.current) {
-        console.log('🛑 [PointsDisplay] Listener already registered, skipping');
-        return;
-      }
-      
       console.log(`🔌 [PointsDisplay] Setting up points update subscription`);
-      listenerRegisteredRef.current = true;
       
       const unsubscribe = subscribeToPointsUpdates((newPointsData) => {
         const newPointsValue = newPointsData.available_points;
@@ -113,7 +105,6 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       return () => {
         console.log('🔌 [PointsDisplay] Cleaning up points subscription');
         unsubscribe();
-        listenerRegisteredRef.current = false;
       };
     }, [isAuthenticated, subscribeToPointsUpdates, lastPoints, animatePointsChange]);
     
@@ -131,14 +122,6 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
         if (deltaTimeoutRef.current) clearTimeout(deltaTimeoutRef.current);
       };
     }, []);
-    
-    // Force a listener check on mount and re-register if needed
-    useEffect(() => {
-      if (isAuthenticated && !listenerRegisteredRef.current && points) {
-        console.log('🔄 [PointsDisplay] Component mounted, ensuring listener is registered');
-        setLastPoints(points.available_points);
-      }
-    }, [isAuthenticated, points]);
 
     const handleManualRefresh = useCallback(() => {
       console.log(`🖱️ [PointsDisplay] Points display clicked, triggering refetch`);

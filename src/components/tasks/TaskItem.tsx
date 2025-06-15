@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types/Task";
@@ -8,11 +9,6 @@ import { formatDistanceToNow, format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { useUserPoints } from "@/hooks/use-user-points";
-import { PointsDisplayHandle } from "@/components/common/PointsDisplay";
-
-// Create a global ref to access the PointsDisplay from any TaskItem
-export const pointsDisplayRef = React.createRef<PointsDisplayHandle>();
 
 interface TaskItemProps {
   task: Task;
@@ -27,36 +23,6 @@ export function TaskItem({ task }: TaskItemProps) {
   const { toast } = useToast();
   const componentRef = useRef<HTMLDivElement>(null);
   const taskCompletionTimeRef = useRef<number>(0);
-  const { points, updatePointsOptimistically, subscribeToPointsUpdates } = useUserPoints();
-  
-  // Subscribe to point updates when component mounts
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log(`🔌 [TaskItem] Setting up points listener`);
-      const unsubscribe = subscribeToPointsUpdates((updatedPoints) => {
-        console.log(`👂 [TaskItem] Received points update in listener:`, updatedPoints);
-        
-        // Check if the points have changed (could be from our task completion)
-        const previousPoints = points?.available_points || 0;
-        const currentPoints = updatedPoints.available_points;
-        
-        if (previousPoints !== currentPoints) {
-          console.log(`✨ [TaskItem] Points changed from ${previousPoints} to ${currentPoints}`);
-          if (pointsDisplayRef.current) {
-            console.log(`🎬 [TaskItem] Triggering animation via ref`);
-            pointsDisplayRef.current.animatePoints(currentPoints, previousPoints);
-          } else {
-            console.log(`⚠️ [TaskItem] pointsDisplayRef is not available`);
-          }
-        }
-      });
-      
-      return () => {
-        console.log(`🔌 [TaskItem] Cleaning up points listener`);
-        unsubscribe();
-      };
-    }
-  }, [isAuthenticated, subscribeToPointsUpdates, points]);
   
   const handleComplete = async () => {
     console.log(`🚨 [TaskItem] BUTTON CLICKED! Task ID: ${task.id}, Completed: ${task.completed}, Authenticated: ${isAuthenticated}`);
@@ -74,24 +40,8 @@ export function TaskItem({ task }: TaskItemProps) {
       console.log(`🎯 [TaskItem] Starting task completion for task: ${task.id}`);
       setIsCompleting(true);
       
-      // Store current points for animation calculation
-      const currentPoints = points?.available_points || 0;
-      const earnedPoints = task.points;
-      console.log(`🎮 [TaskItem] Current points: ${currentPoints}, Task will add: ${earnedPoints} points`);
-      
       try {
-        // CRITICAL FIX: Pre-emptively trigger animation IMMEDIATELY before any async ops
-        if (pointsDisplayRef.current) {
-          console.log(`⚡ [TaskItem] Pre-emptively triggering points animation: ${currentPoints} -> ${currentPoints + earnedPoints}`);
-          pointsDisplayRef.current.animatePoints(currentPoints + earnedPoints, currentPoints);
-        } else {
-          console.warn("⚠️ [TaskItem] Cannot animate points - ref not available!");
-        }
-        
-        // Apply optimistic updates IMMEDIATELY for instant feedback
-        //updatePointsOptimistically(earnedPoints);
-        
-        // This is now just for server-side persistence
+        // Just complete the task - PointsDisplay will handle the animation
         console.log(`🔄 [TaskItem] Calling completeTask from context`);
         await completeTask(task.id);
         const completionDuration = (performance.now() - taskCompletionTimeRef.current).toFixed(2);
