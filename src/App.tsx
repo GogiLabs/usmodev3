@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -65,6 +66,7 @@ const PointsDisplayManager = () => {
   const { points } = useUserPoints();
   const pointsDisplayRef = useRef<any>(null);
   const lastKnownPointsRef = useRef<number | null>(null);
+  const [, forceUpdate] = useState({});
 
   console.log(`🎯 [PointsDisplayManager] RENDER - Points object:`, points);
   console.log(`🎯 [PointsDisplayManager] RENDER - LastKnown: ${lastKnownPointsRef.current}`);
@@ -100,6 +102,12 @@ const PointsDisplayManager = () => {
     lastKnownPointsRef.current = currentPoints;
     console.log(`📝 [PointsDisplayManager] Updated lastKnownPointsRef to ${currentPoints}`);
   }, [points?.available_points]); // Direct dependency on the actual points value
+
+  // Force re-render when points object changes (ensures we catch all updates)
+  useEffect(() => {
+    console.log(`🔄 [PointsDisplayManager] Points object changed, forcing update`);
+    forceUpdate({});
+  }, [points]);
 
   console.log(`🎯 [PointsDisplayManager] About to render PointsDisplay with ref`);
 
