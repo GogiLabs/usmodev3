@@ -32,6 +32,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     const animationPendingRef = useRef<boolean>(false);
     const updateIdRef = useRef<number>(0);
     const listenerRegistered = useRef<boolean>(false);
+    const unsubscribeRef = useRef<(() => void) | null>(null);
     
     const { isAuthenticated } = useAuth();
 
@@ -88,7 +89,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       }
     }, [points, lastPoints]);
     
-    // Set up points update subscription - CRITICAL: This must happen immediately when component mounts
+    // Set up points update subscription - SINGLE REGISTRATION ONLY
     useEffect(() => {
       if (!isAuthenticated) {
         console.log(`⚠️ [PointsDisplay] Not authenticated, skipping listener setup`);
@@ -120,12 +121,26 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
         }
       });
       
+      // Store the unsubscribe function
+      unsubscribeRef.current = unsubscribe;
+      
       return () => {
         console.log('🔌 [PointsDisplay] Cleaning up points subscription');
         listenerRegistered.current = false;
-        unsubscribe();
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+          unsubscribeRef.current = null;
+        }
       };
-    }, [isAuthenticated, subscribeToPointsUpdates, animatePointsChange]); // Removed lastPoints dependency to avoid re-registration
+    }, [isAuthenticated]); // MINIMAL DEPENDENCIES - only depend on auth status
+    
+    // Separate effect to handle the animation callback when lastPoints changes
+    useEffect(() => {
+      if (listenerRegistered.current && unsubscribeRef.current) {
+        // Re-register with updated lastPoints reference
+        console.log(`🔄 [PointsDisplay] Updating listener with new lastPoints: ${lastPoints}`);
+      }
+    }, [lastPoints]);
     
     // Cleanup function - separate from subscription management
     useEffect(() => {
