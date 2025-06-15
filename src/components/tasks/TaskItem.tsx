@@ -145,6 +145,7 @@ export function TaskItem({ task }: TaskItemProps) {
           onClick={handleButtonClick}
           disabled={task.completed}
           data-testid={`complete-task-${task.id}`}
+          title={`DEBUG: Task ${task.id} - ${task.completed ? 'COMPLETED' : 'INCOMPLETE'}`}
         >
           <CheckCircle2 
             className={cn(
@@ -154,6 +155,10 @@ export function TaskItem({ task }: TaskItemProps) {
             )}
             fill={task.completed || isCompleting ? "currentColor" : "none"} 
           />
+          {/* Add debug text overlay */}
+          <span className="absolute -bottom-6 left-0 text-xs text-red-500 font-bold bg-white px-1 rounded">
+            {task.completed ? 'DONE' : 'CLICK'}
+          </span>
         </Button>
         
         <div className="flex flex-col flex-1 min-w-0">
@@ -161,7 +166,7 @@ export function TaskItem({ task }: TaskItemProps) {
             "text-sm font-medium truncate",
             task.completed && "line-through text-muted-foreground"
           )}>
-            {task.description}
+            {task.description} [DEBUG: ID-{task.id}]
           </span>
           
           <div className="flex items-center gap-2 mt-0.5">
