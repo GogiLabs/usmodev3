@@ -31,6 +31,7 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     const deltaTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const animationPendingRef = useRef<boolean>(false);
     const updateIdRef = useRef<number>(0);
+    const listenerRegistered = useRef<boolean>(false);
     
     const { isAuthenticated } = useAuth();
 
@@ -78,12 +79,29 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
     useImperativeHandle(ref, () => ({
       animatePoints: animatePointsChange
     }), [animatePointsChange]);
-    
-    // Set up points update subscription - this is the only component that should listen
+
+    // Initialize lastPoints when points first load
     useEffect(() => {
-      if (!isAuthenticated) return;
+      if (points && lastPoints === null) {
+        console.log(`🏁 [PointsDisplay] Initializing lastPoints to:`, points.available_points);
+        setLastPoints(points.available_points);
+      }
+    }, [points, lastPoints]);
+    
+    // Set up points update subscription - CRITICAL: This must happen immediately when component mounts
+    useEffect(() => {
+      if (!isAuthenticated) {
+        console.log(`⚠️ [PointsDisplay] Not authenticated, skipping listener setup`);
+        return;
+      }
       
-      console.log(`🔌 [PointsDisplay] Setting up points update subscription`);
+      if (listenerRegistered.current) {
+        console.log(`⚠️ [PointsDisplay] Listener already registered, skipping duplicate setup`);
+        return;
+      }
+      
+      console.log(`🔌 [PointsDisplay] Setting up points update subscription immediately`);
+      listenerRegistered.current = true;
       
       const unsubscribe = subscribeToPointsUpdates((newPointsData) => {
         const newPointsValue = newPointsData.available_points;
@@ -104,16 +122,10 @@ export const PointsDisplay = forwardRef<PointsDisplayHandle, PointsDisplayProps>
       
       return () => {
         console.log('🔌 [PointsDisplay] Cleaning up points subscription');
+        listenerRegistered.current = false;
         unsubscribe();
       };
-    }, [isAuthenticated, subscribeToPointsUpdates, lastPoints, animatePointsChange]);
-    
-    // Initialize lastPoints when points first load - separate from the listener setup
-    useEffect(() => {
-      if (points && lastPoints === null) {
-        setLastPoints(points.available_points);
-      }
-    }, [points, lastPoints]);
+    }, [isAuthenticated, subscribeToPointsUpdates, animatePointsChange]); // Removed lastPoints dependency to avoid re-registration
     
     // Cleanup function - separate from subscription management
     useEffect(() => {
